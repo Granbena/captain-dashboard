@@ -40,6 +40,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
+      min-width: 140px;
     }
 
     label {
@@ -123,6 +124,10 @@
       color: #b00020;
       font-weight: bold;
     }
+
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -133,25 +138,35 @@
     <div class="field">
       <label for="mode">Modo</label>
       <select id="mode">
-        <option value="latest">Última fecha</option>
+        <option value="today_live">Hoy en vivo</option>
         <option value="single_day">Fecha específica</option>
         <option value="range">Rango</option>
       </select>
     </div>
 
-    <div class="field">
+    <div class="field" id="businessDateField">
       <label for="business_date">Fecha</label>
       <input type="date" id="business_date" />
     </div>
 
-    <div class="field">
+    <div class="field hidden" id="dateStartField">
       <label for="date_start">Fecha inicio</label>
       <input type="date" id="date_start" />
     </div>
 
-    <div class="field">
+    <div class="field hidden" id="dateEndField">
       <label for="date_end">Fecha fin</label>
       <input type="date" id="date_end" />
+    </div>
+
+    <div class="field" id="hourStartField">
+      <label for="hour_start">Hora inicio</label>
+      <input type="number" id="hour_start" min="0" max="23" placeholder="Ej: 12" />
+    </div>
+
+    <div class="field" id="hourEndField">
+      <label for="hour_end">Hora fin</label>
+      <input type="number" id="hour_end" min="0" max="23" placeholder="Ej: 14" />
     </div>
 
     <div class="field">
@@ -170,6 +185,10 @@
       <div class="card">
         <div class="card-title">Fecha / rango</div>
         <div class="card-value" id="summaryDate">-</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Horario</div>
+        <div class="card-value" id="summaryHour">-</div>
       </div>
       <div class="card">
         <div class="card-title">Tiendas</div>
@@ -209,8 +228,19 @@
   </div>
 
   <script>
-    // REEMPLAZA ESTA URL POR LA TUYA
-    const API_URL = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read';
+    const API_URL_DAILY = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read';
+    const API_URL_LIVE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read-live';
+
+    function todayChileIso() {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Santiago',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      return formatter.format(now);
+    }
 
     function formatNumber(value, decimals = 2) {
       if (value === null || value === undefined || value === '') return '-';
@@ -221,6 +251,7 @@
 
     function avg(values) {
       const valid = values
+        .filter(v => v !== null && v !== undefined && v !== '')
         .map(Number)
         .filter(v => !Number.isNaN(v));
 
@@ -228,45 +259,120 @@
       return valid.reduce((a, b) => a + b, 0) / valid.length;
     }
 
-    function buildUrl() {
+    function getHourText(hourStart, hourEnd) {
+      if (hourStart !== null && hourEnd !== null) return `${hourStart}:00 a ${hourEnd}:59`;
+      if (hourStart !== null) return `Desde ${hourStart}:00`;
+      if (hourEnd !== null) return `Hasta ${hourEnd}:59`;
+      return '-';
+    }
+
+    function updateFieldVisibility() {
+      const mode = document.getElementById('mode').value;
+
+      const businessDateField = document.getElementById('businessDateField');
+      const dateStartField = document.getElementById('dateStartField');
+      const dateEndField = document.getElementById('dateEndField');
+      const hourStartField = document.getElementById('hourStartField');
+      const hourEndField = document.getElementById('hourEndField');
+
+      if (mode === 'today_live') {
+        businessDateField.classList.add('hidden');
+        dateStartField.classList.add('hidden');
+        dateEndField.classList.add('hidden');
+        hourStartField.classList.remove('hidden');
+        hourEndField.classList.remove('hidden');
+      } else if (mode === 'single_day') {
+        businessDateField.classList.remove('hidden');
+        dateStartField.classList.add('hidden');
+        dateEndField.classList.add('hidden');
+        hourStartField.classList.remove('hidden');
+        hourEndField.classList.remove('hidden');
+      } else if (mode === 'range') {
+        businessDateField.classList.add('hidden');
+        dateStartField.classList.remove('hidden');
+        dateEndField.classList.remove('hidden');
+        hourStartField.classList.add('hidden');
+        hourEndField.classList.add('hidden');
+      }
+    }
+
+    function buildRequest() {
       const mode = document.getElementById('mode').value;
       const businessDate = document.getElementById('business_date').value;
       const dateStart = document.getElementById('date_start').value;
       const dateEnd = document.getElementById('date_end').value;
+      const hourStart = document.getElementById('hour_start').value;
+      const hourEnd = document.getElementById('hour_end').value;
 
-      const url = new URL(API_URL);
+      let url;
 
-      if (mode === 'single_day' && businessDate) {
-        url.searchParams.set('business_date', businessDate);
+      if (mode === 'today_live') {
+        url = new URL(API_URL_LIVE);
+        url.searchParams.set('business_date', todayChileIso());
+
+        if (hourStart !== '') {
+          url.searchParams.set('hour_start', hourStart);
+        }
+
+        if (hourEnd !== '') {
+          url.searchParams.set('hour_end', hourEnd);
+        }
+      } else if (mode === 'single_day') {
+        url = new URL(API_URL_LIVE);
+
+        if (businessDate) {
+          url.searchParams.set('business_date', businessDate);
+        }
+
+        if (hourStart !== '') {
+          url.searchParams.set('hour_start', hourStart);
+        }
+
+        if (hourEnd !== '') {
+          url.searchParams.set('hour_end', hourEnd);
+        }
+      } else {
+        url = new URL(API_URL_DAILY);
+
+        if (dateStart && dateEnd) {
+          url.searchParams.set('date_start', dateStart);
+          url.searchParams.set('date_end', dateEnd);
+        }
       }
 
-      if (mode === 'range' && dateStart && dateEnd) {
-        url.searchParams.set('date_start', dateStart);
-        url.searchParams.set('date_end', dateEnd);
-      }
-
-      return url.toString();
+      return {
+        mode,
+        url: url.toString()
+      };
     }
 
-    function renderSummary(payload) {
+    function renderSummary(payload, requestMode) {
       const rows = payload.data || [];
-
       const totalOrders = rows.reduce((sum, row) => sum + (Number(row.orders_total) || 0), 0);
       const e2eAvg = avg(rows.map(r => r.delivery_minutes));
       const tripAvg = avg(rows.map(r => r.trip_minutes));
 
-      document.getElementById('summaryMode').textContent = payload.mode || '-';
-
+      let modeText = '-';
       let dateText = '-';
-      if (payload.mode === 'latest') {
-        dateText = payload.latest_business_date || '-';
-      } else if (payload.mode === 'single_day') {
-        dateText = payload.requested_business_date || '-';
-      } else if (payload.mode === 'range') {
+      let hourText = '-';
+
+      if (requestMode === 'today_live') {
+        modeText = 'Hoy en vivo';
+        dateText = payload.business_date || todayChileIso();
+        hourText = getHourText(payload.hour_start, payload.hour_end);
+      } else if (requestMode === 'single_day') {
+        modeText = 'Fecha específica';
+        dateText = payload.business_date || '-';
+        hourText = getHourText(payload.hour_start, payload.hour_end);
+      } else if (requestMode === 'range') {
+        modeText = 'Rango';
         dateText = `${payload.requested_date_start || '-'} a ${payload.requested_date_end || '-'}`;
+        hourText = '-';
       }
 
+      document.getElementById('summaryMode').textContent = modeText;
       document.getElementById('summaryDate').textContent = dateText;
+      document.getElementById('summaryHour').textContent = hourText;
       document.getElementById('summaryStores').textContent = rows.length;
       document.getElementById('summaryOrders').textContent = totalOrders;
       document.getElementById('summaryE2E').textContent = e2eAvg !== null ? formatNumber(e2eAvg) : '-';
@@ -312,8 +418,8 @@
       status.classList.remove('error');
 
       try {
-        const url = buildUrl();
-        const res = await fetch(url);
+        const request = buildRequest();
+        const res = await fetch(request.url);
         const payload = await res.json();
 
         if (!payload.ok) {
@@ -323,8 +429,14 @@
           return;
         }
 
-        status.textContent = `Carga exitosa. Registros: ${payload.count ?? 0}`;
-        renderSummary(payload);
+        const recordsCount =
+          payload.count ??
+          payload.count_stores ??
+          payload.data?.length ??
+          0;
+
+        status.textContent = `Carga exitosa. Registros: ${recordsCount}`;
+        renderSummary(payload, request.mode);
         renderTable(payload);
       } catch (error) {
         status.textContent = 'Error de conexión';
@@ -333,8 +445,14 @@
       }
     }
 
+    document.getElementById('mode').addEventListener('change', updateFieldVisibility);
     document.getElementById('loadBtn').addEventListener('click', loadDashboard);
 
+    document.getElementById('business_date').value = todayChileIso();
+    document.getElementById('date_start').value = todayChileIso();
+    document.getElementById('date_end').value = todayChileIso();
+
+    updateFieldVisibility();
     loadDashboard();
   </script>
 </body>
