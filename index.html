@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Captain KPI Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 24px;
+      background: #f7f7f9;
+      color: #222;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    .subtle {
+      color: #666;
+      margin-bottom: 20px;
+    }
+
+    .filters, .summary {
+      background: white;
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 14px;
+      color: #444;
+    }
+
+    input, select, button {
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    button {
+      cursor: pointer;
+      background: #111827;
+      color: white;
+      border: none;
+    }
+
+    button:hover {
+      opacity: 0.92;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: #fafafa;
+      border: 1px solid #ececec;
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    .card-value {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .table-wrap {
+      background: white;
+      padding: 16px;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 850px;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background: #fafafa;
+    }
+
+    .status {
+      margin: 12px 0;
+      color: #444;
+    }
+
+    .error {
+      color: #b00020;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Captain KPI Dashboard</h1>
+  <div class="subtle">Lectura desde Supabase Edge Function</div>
+
+  <div class="filters">
+    <div class="field">
+      <label for="mode">Modo</label>
+      <select id="mode">
+        <option value="latest">Última fecha</option>
+        <option value="single_day">Fecha específica</option>
+        <option value="range">Rango</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="business_date">Fecha</label>
+      <input type="date" id="business_date" />
+    </div>
+
+    <div class="field">
+      <label for="date_start">Fecha inicio</label>
+      <input type="date" id="date_start" />
+    </div>
+
+    <div class="field">
+      <label for="date_end">Fecha fin</label>
+      <input type="date" id="date_end" />
+    </div>
+
+    <div class="field">
+      <button id="loadBtn">Cargar dashboard</button>
+    </div>
+  </div>
+
+  <div class="status" id="status">Esperando carga...</div>
+
+  <div class="summary">
+    <div class="summary-grid">
+      <div class="card">
+        <div class="card-title">Modo</div>
+        <div class="card-value" id="summaryMode">-</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Fecha / rango</div>
+        <div class="card-value" id="summaryDate">-</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Tiendas</div>
+        <div class="card-value" id="summaryStores">0</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Órdenes</div>
+        <div class="card-value" id="summaryOrders">0</div>
+      </div>
+      <div class="card">
+        <div class="card-title">E2E Prom.</div>
+        <div class="card-value" id="summaryE2E">-</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Trip Prom.</div>
+        <div class="card-value" id="summaryTrip">-</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Business Date</th>
+          <th>Tienda</th>
+          <th>Órdenes</th>
+          <th>On Time %</th>
+          <th>E2E</th>
+          <th>Collection</th>
+          <th>Trip</th>
+          <th>Promise</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    // REEMPLAZA ESTA URL POR LA TUYA
+    const API_URL = 'https://TU-PROYECTO.functions.supabase.co/captain-kpi-read';
+
+    function formatNumber(value, decimals = 2) {
+      if (value === null || value === undefined || value === '') return '-';
+      const num = Number(value);
+      if (Number.isNaN(num)) return '-';
+      return num.toFixed(decimals);
+    }
+
+    function avg(values) {
+      const valid = values
+        .map(Number)
+        .filter(v => !Number.isNaN(v));
+
+      if (!valid.length) return null;
+      return valid.reduce((a, b) => a + b, 0) / valid.length;
+    }
+
+    function buildUrl() {
+      const mode = document.getElementById('mode').value;
+      const businessDate = document.getElementById('business_date').value;
+      const dateStart = document.getElementById('date_start').value;
+      const dateEnd = document.getElementById('date_end').value;
+
+      const url = new URL(API_URL);
+
+      if (mode === 'single_day' && businessDate) {
+        url.searchParams.set('business_date', businessDate);
+      }
+
+      if (mode === 'range' && dateStart && dateEnd) {
+        url.searchParams.set('date_start', dateStart);
+        url.searchParams.set('date_end', dateEnd);
+      }
+
+      return url.toString();
+    }
+
+    function renderSummary(payload) {
+      const rows = payload.data || [];
+
+      const totalOrders = rows.reduce((sum, row) => sum + (Number(row.orders_total) || 0), 0);
+      const e2eAvg = avg(rows.map(r => r.delivery_minutes));
+      const tripAvg = avg(rows.map(r => r.trip_minutes));
+
+      document.getElementById('summaryMode').textContent = payload.mode || '-';
+
+      let dateText = '-';
+      if (payload.mode === 'latest') {
+        dateText = payload.latest_business_date || '-';
+      } else if (payload.mode === 'single_day') {
+        dateText = payload.requested_business_date || '-';
+      } else if (payload.mode === 'range') {
+        dateText = `${payload.requested_date_start || '-'} a ${payload.requested_date_end || '-'}`;
+      }
+
+      document.getElementById('summaryDate').textContent = dateText;
+      document.getElementById('summaryStores').textContent = rows.length;
+      document.getElementById('summaryOrders').textContent = totalOrders;
+      document.getElementById('summaryE2E').textContent = e2eAvg !== null ? formatNumber(e2eAvg) : '-';
+      document.getElementById('summaryTrip').textContent = tripAvg !== null ? formatNumber(tripAvg) : '-';
+    }
+
+    function renderTable(payload) {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+
+      const rows = payload.data || [];
+
+      if (!rows.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8">Sin datos para el filtro seleccionado.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      rows.forEach(row => {
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td>${row.business_date || '-'}</td>
+          <td>${row.store_name || '-'}</td>
+          <td>${row.orders_total ?? '-'}</td>
+          <td>${row.on_time_pct ?? '-'}</td>
+          <td>${formatNumber(row.delivery_minutes)}</td>
+          <td>${formatNumber(row.collection_minutes)}</td>
+          <td>${formatNumber(row.trip_minutes)}</td>
+          <td>${formatNumber(row.promise_minutes)}</td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function loadDashboard() {
+      const status = document.getElementById('status');
+      status.textContent = 'Cargando...';
+      status.classList.remove('error');
+
+      try {
+        const url = buildUrl();
+        const res = await fetch(url);
+        const payload = await res.json();
+
+        if (!payload.ok) {
+          status.textContent = 'Error cargando datos';
+          status.classList.add('error');
+          console.error(payload);
+          return;
+        }
+
+        status.textContent = `Carga exitosa. Registros: ${payload.count ?? 0}`;
+        renderSummary(payload);
+        renderTable(payload);
+      } catch (error) {
+        status.textContent = 'Error de conexión';
+        status.classList.add('error');
+        console.error(error);
+      }
+    }
+
+    document.getElementById('loadBtn').addEventListener('click', loadDashboard);
+
+    loadDashboard();
+  </script>
+</body>
+</html>
