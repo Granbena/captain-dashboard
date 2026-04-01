@@ -21,10 +21,10 @@
       margin-bottom: 20px;
     }
 
-    .filters, .summary {
+    .filters, .summary, .table-wrap {
       background: white;
       padding: 16px;
-      border-radius: 10px;
+      border-radius: 12px;
       margin-bottom: 16px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     }
@@ -60,6 +60,7 @@
       background: #111827;
       color: white;
       border: none;
+      font-weight: 600;
     }
 
     button:hover {
@@ -75,7 +76,7 @@
     .card {
       background: #fafafa;
       border: 1px solid #ececec;
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 14px;
     }
 
@@ -88,20 +89,32 @@
     .card-value {
       font-size: 24px;
       font-weight: bold;
+      line-height: 1.2;
     }
 
-    .table-wrap {
-      background: white;
-      padding: 16px;
-      border-radius: 10px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-      overflow-x: auto;
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .table-title {
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .table-subtle {
+      color: #666;
+      font-size: 13px;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 850px;
+      min-width: 1100px;
     }
 
     th, td {
@@ -109,9 +122,17 @@
       border-bottom: 1px solid #eee;
       text-align: left;
       font-size: 14px;
+      vertical-align: middle;
     }
 
     th {
+      background: #fafafa;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tbody tr:hover {
       background: #fafafa;
     }
 
@@ -128,11 +149,61 @@
     .hidden {
       display: none;
     }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      min-width: 68px;
+      text-align: center;
+    }
+
+    .pill-red {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .pill-yellow {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .pill-green {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .metric-red {
+      color: #b91c1c;
+      font-weight: 700;
+    }
+
+    .metric-yellow {
+      color: #a16207;
+      font-weight: 700;
+    }
+
+    .metric-green {
+      color: #15803d;
+      font-weight: 700;
+    }
+
+    .align-right {
+      text-align: right;
+    }
+
+    .small-note {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
   <h1>Captain KPI Dashboard</h1>
-  <div class="subtle">Lectura desde Supabase Edge Function</div>
+  <div class="subtle">Vista operativa por tienda con filtro horario y KPI reales</div>
 
   <div class="filters">
     <div class="field">
@@ -195,36 +266,59 @@
         <div class="card-value" id="summaryStores">0</div>
       </div>
       <div class="card">
-        <div class="card-title">Órdenes</div>
-        <div class="card-value" id="summaryOrders">0</div>
+        <div class="card-title">Entregas</div>
+        <div class="card-value" id="summaryDeliveries">0</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Pick Prom.</div>
+        <div class="card-value" id="summaryPick">-</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Delivery Prom.</div>
+        <div class="card-value" id="summaryDelivery">-</div>
       </div>
       <div class="card">
         <div class="card-title">E2E Prom.</div>
         <div class="card-value" id="summaryE2E">-</div>
       </div>
       <div class="card">
-        <div class="card-title">Trip Prom.</div>
-        <div class="card-value" id="summaryTrip">-</div>
+        <div class="card-title">OnTime Prom.</div>
+        <div class="card-value" id="summaryOnTime">-</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Promesa Prom.</div>
+        <div class="card-value" id="summaryPromise">-</div>
       </div>
     </div>
   </div>
 
   <div class="table-wrap">
+    <div class="table-header">
+      <div>
+        <div class="table-title">Detalle por tienda</div>
+        <div class="table-subtle">Ordenado por peor OnTime y luego por mayor E2E</div>
+      </div>
+    </div>
+
     <table>
       <thead>
         <tr>
           <th>Business Date</th>
           <th>Tienda</th>
-          <th>Órdenes</th>
-          <th>On Time %</th>
-          <th>E2E</th>
-          <th>Collection</th>
-          <th>Trip</th>
-          <th>Promise</th>
+          <th class="align-right">Entregas</th>
+          <th class="align-right">Pick</th>
+          <th class="align-right">Delivery</th>
+          <th class="align-right">E2E</th>
+          <th class="align-right">Promesa</th>
+          <th class="align-right">OnTime %</th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
     </table>
+
+    <div class="small-note">
+      Pick = desde creación hasta retiro. Delivery = desde retiro hasta entrega. E2E = desde creación hasta entrega.
+    </div>
   </div>
 
   <script>
@@ -249,6 +343,13 @@
       return num.toFixed(decimals);
     }
 
+    function formatPercent(value, decimals = 1) {
+      if (value === null || value === undefined || value === '') return '-';
+      const num = Number(value);
+      if (Number.isNaN(num)) return '-';
+      return `${num.toFixed(decimals)}%`;
+    }
+
     function avg(values) {
       const valid = values
         .filter(v => v !== null && v !== undefined && v !== '')
@@ -259,10 +360,18 @@
       return valid.reduce((a, b) => a + b, 0) / valid.length;
     }
 
+    function sum(values) {
+      return values
+        .map(v => Number(v) || 0)
+        .reduce((a, b) => a + b, 0);
+    }
+
     function getHourText(hourStart, hourEnd) {
-      if (hourStart !== null && hourEnd !== null) return `${hourStart}:00 a ${hourEnd}:59`;
-      if (hourStart !== null) return `Desde ${hourStart}:00`;
-      if (hourEnd !== null) return `Hasta ${hourEnd}:59`;
+      if (hourStart !== null && hourStart !== undefined && hourEnd !== null && hourEnd !== undefined) {
+        return `${hourStart}:00 a ${hourEnd}:59`;
+      }
+      if (hourStart !== null && hourStart !== undefined) return `Desde ${hourStart}:00`;
+      if (hourEnd !== null && hourEnd !== undefined) return `Hasta ${hourEnd}:59`;
       return '-';
     }
 
@@ -287,7 +396,7 @@
         dateEndField.classList.add('hidden');
         hourStartField.classList.remove('hidden');
         hourEndField.classList.remove('hidden');
-      } else if (mode === 'range') {
+      } else {
         businessDateField.classList.add('hidden');
         dateStartField.classList.remove('hidden');
         dateEndField.classList.remove('hidden');
@@ -310,13 +419,8 @@
         url = new URL(API_URL_LIVE);
         url.searchParams.set('business_date', todayChileIso());
 
-        if (hourStart !== '') {
-          url.searchParams.set('hour_start', hourStart);
-        }
-
-        if (hourEnd !== '') {
-          url.searchParams.set('hour_end', hourEnd);
-        }
+        if (hourStart !== '') url.searchParams.set('hour_start', hourStart);
+        if (hourEnd !== '') url.searchParams.set('hour_end', hourEnd);
       } else if (mode === 'single_day') {
         url = new URL(API_URL_LIVE);
 
@@ -324,13 +428,8 @@
           url.searchParams.set('business_date', businessDate);
         }
 
-        if (hourStart !== '') {
-          url.searchParams.set('hour_start', hourStart);
-        }
-
-        if (hourEnd !== '') {
-          url.searchParams.set('hour_end', hourEnd);
-        }
+        if (hourStart !== '') url.searchParams.set('hour_start', hourStart);
+        if (hourEnd !== '') url.searchParams.set('hour_end', hourEnd);
       } else {
         url = new URL(API_URL_DAILY);
 
@@ -346,11 +445,89 @@
       };
     }
 
-    function renderSummary(payload, requestMode) {
+    function getOnTimeClass(value) {
+      const num = Number(value);
+      if (Number.isNaN(num)) return '';
+      if (num < 80) return 'pill pill-red';
+      if (num < 90) return 'pill pill-yellow';
+      return 'pill pill-green';
+    }
+
+    function getE2EClass(value) {
+      const num = Number(value);
+      if (Number.isNaN(num)) return '';
+      if (num > 50) return 'metric-red';
+      if (num >= 40) return 'metric-yellow';
+      return 'metric-green';
+    }
+
+    function getPickClass(value) {
+      const num = Number(value);
+      if (Number.isNaN(num)) return '';
+      if (num > 30) return 'metric-red';
+      if (num >= 20) return 'metric-yellow';
+      return 'metric-green';
+    }
+
+    function getDeliveryClass(value) {
+      const num = Number(value);
+      if (Number.isNaN(num)) return '';
+      if (num > 18) return 'metric-red';
+      if (num >= 12) return 'metric-yellow';
+      return 'metric-green';
+    }
+
+    function normalizeRows(payload, requestMode) {
       const rows = payload.data || [];
-      const totalOrders = rows.reduce((sum, row) => sum + (Number(row.orders_total) || 0), 0);
-      const e2eAvg = avg(rows.map(r => r.delivery_minutes));
-      const tripAvg = avg(rows.map(r => r.trip_minutes));
+
+      if (requestMode === 'range') {
+        return rows.map(row => ({
+          business_date: row.business_date,
+          store_uuid: row.store_uuid,
+          store_name: row.store_name,
+          deliveries_total: row.deliveries_total ?? row.orders_total ?? 0,
+          pick_minutes: row.collection_minutes ?? null,
+          delivery_minutes: row.trip_minutes ?? null,
+          e2e_minutes: row.delivery_minutes ?? null,
+          promise_minutes: row.promise_minutes ?? null,
+          on_time_pct: row.on_time_pct ?? null
+        }));
+      }
+
+      return rows.map(row => ({
+        business_date: row.business_date,
+        store_uuid: row.store_uuid,
+        store_name: row.store_name,
+        deliveries_total: row.deliveries_total ?? row.orders_total ?? 0,
+        pick_minutes: row.pick_minutes ?? row.collection_minutes ?? null,
+        delivery_minutes: row.delivery_minutes ?? row.trip_minutes ?? null,
+        e2e_minutes: row.e2e_minutes ?? row.delivery_minutes ?? null,
+        promise_minutes: row.promise_minutes ?? null,
+        on_time_pct: row.on_time_pct ?? null
+      }));
+    }
+
+    function sortRows(rows) {
+      return [...rows].sort((a, b) => {
+        const aOnTime = a.on_time_pct === null || a.on_time_pct === undefined ? 9999 : Number(a.on_time_pct);
+        const bOnTime = b.on_time_pct === null || b.on_time_pct === undefined ? 9999 : Number(b.on_time_pct);
+
+        if (aOnTime !== bOnTime) return aOnTime - bOnTime;
+
+        const aE2E = a.e2e_minutes === null || a.e2e_minutes === undefined ? -9999 : Number(a.e2e_minutes);
+        const bE2E = b.e2e_minutes === null || b.e2e_minutes === undefined ? -9999 : Number(b.e2e_minutes);
+
+        return bE2E - aE2E;
+      });
+    }
+
+    function renderSummary(payload, requestMode, rows) {
+      const totalDeliveries = sum(rows.map(r => r.deliveries_total));
+      const pickAvg = avg(rows.map(r => r.pick_minutes));
+      const deliveryAvg = avg(rows.map(r => r.delivery_minutes));
+      const e2eAvg = avg(rows.map(r => r.e2e_minutes));
+      const promiseAvg = avg(rows.map(r => r.promise_minutes));
+      const onTimeAvg = avg(rows.map(r => r.on_time_pct));
 
       let modeText = '-';
       let dateText = '-';
@@ -374,16 +551,17 @@
       document.getElementById('summaryDate').textContent = dateText;
       document.getElementById('summaryHour').textContent = hourText;
       document.getElementById('summaryStores').textContent = rows.length;
-      document.getElementById('summaryOrders').textContent = totalOrders;
+      document.getElementById('summaryDeliveries').textContent = totalDeliveries;
+      document.getElementById('summaryPick').textContent = pickAvg !== null ? formatNumber(pickAvg) : '-';
+      document.getElementById('summaryDelivery').textContent = deliveryAvg !== null ? formatNumber(deliveryAvg) : '-';
       document.getElementById('summaryE2E').textContent = e2eAvg !== null ? formatNumber(e2eAvg) : '-';
-      document.getElementById('summaryTrip').textContent = tripAvg !== null ? formatNumber(tripAvg) : '-';
+      document.getElementById('summaryOnTime').textContent = onTimeAvg !== null ? formatPercent(onTimeAvg) : '-';
+      document.getElementById('summaryPromise').textContent = promiseAvg !== null ? formatNumber(promiseAvg) : '-';
     }
 
-    function renderTable(payload) {
+    function renderTable(rows) {
       const tbody = document.getElementById('tableBody');
       tbody.innerHTML = '';
-
-      const rows = payload.data || [];
 
       if (!rows.length) {
         tbody.innerHTML = `
@@ -397,15 +575,26 @@
       rows.forEach(row => {
         const tr = document.createElement('tr');
 
+        const onTimeClass = getOnTimeClass(row.on_time_pct);
+        const pickClass = getPickClass(row.pick_minutes);
+        const deliveryClass = getDeliveryClass(row.delivery_minutes);
+        const e2eClass = getE2EClass(row.e2e_minutes);
+
         tr.innerHTML = `
           <td>${row.business_date || '-'}</td>
           <td>${row.store_name || '-'}</td>
-          <td>${row.orders_total ?? '-'}</td>
-          <td>${row.on_time_pct ?? '-'}</td>
-          <td>${formatNumber(row.delivery_minutes)}</td>
-          <td>${formatNumber(row.collection_minutes)}</td>
-          <td>${formatNumber(row.trip_minutes)}</td>
-          <td>${formatNumber(row.promise_minutes)}</td>
+          <td class="align-right">${row.deliveries_total ?? 0}</td>
+          <td class="align-right ${pickClass}">${formatNumber(row.pick_minutes)}</td>
+          <td class="align-right ${deliveryClass}">${formatNumber(row.delivery_minutes)}</td>
+          <td class="align-right ${e2eClass}">${formatNumber(row.e2e_minutes)}</td>
+          <td class="align-right">${formatNumber(row.promise_minutes)}</td>
+          <td class="align-right">
+            ${
+              row.on_time_pct !== null && row.on_time_pct !== undefined
+                ? `<span class="${onTimeClass}">${formatPercent(row.on_time_pct)}</span>`
+                : '-'
+            }
+          </td>
         `;
 
         tbody.appendChild(tr);
@@ -429,6 +618,9 @@
           return;
         }
 
+        const normalizedRows = normalizeRows(payload, request.mode);
+        const sortedRows = sortRows(normalizedRows);
+
         const recordsCount =
           payload.count ??
           payload.count_stores ??
@@ -436,10 +628,10 @@
           0;
 
         status.textContent = `Carga exitosa. Registros: ${recordsCount}`;
-        renderSummary(payload, request.mode);
-        renderTable(payload);
+        renderSummary(payload, request.mode, sortedRows);
+        renderTable(sortedRows);
       } catch (error) {
-        status.textContent = 'Error de conexión';
+        status.textContent = `Error de conexión`;
         status.classList.add('error');
         console.error(error);
       }
