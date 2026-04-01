@@ -29,7 +29,31 @@
       box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     }
 
-    .filters {
+    .mode-tabs {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .mode-tab {
+      border: 1px solid #d1d5db;
+      background: #fff;
+      color: #374151;
+      padding: 10px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .mode-tab.active {
+      background: #111827;
+      color: white;
+      border-color: #111827;
+    }
+
+    .filters-row {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
@@ -44,8 +68,9 @@
     }
 
     label {
-      font-size: 14px;
+      font-size: 13px;
       color: #444;
+      font-weight: 600;
     }
 
     input, select, button {
@@ -60,36 +85,42 @@
       background: #111827;
       color: white;
       border: none;
-      font-weight: 600;
+      font-weight: 700;
     }
 
     button:hover {
       opacity: 0.92;
     }
 
+    .hidden {
+      display: none;
+    }
+
     .summary-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
     }
 
     .card {
       background: #fafafa;
       border: 1px solid #ececec;
-      border-radius: 12px;
-      padding: 14px;
+      border-radius: 10px;
+      padding: 12px;
     }
 
     .card-title {
-      font-size: 13px;
+      font-size: 12px;
       color: #666;
       margin-bottom: 6px;
+      font-weight: 700;
     }
 
     .card-value {
-      font-size: 24px;
-      font-weight: bold;
-      line-height: 1.2;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.25;
+      word-break: break-word;
     }
 
     .table-header {
@@ -144,10 +175,6 @@
     .error {
       color: #b00020;
       font-weight: bold;
-    }
-
-    .hidden {
-      display: none;
     }
 
     .pill {
@@ -206,42 +233,53 @@
   <div class="subtle">Vista operativa por tienda con filtro horario y KPI reales</div>
 
   <div class="filters">
-    <div class="field">
-      <label for="mode">Modo</label>
-      <select id="mode">
-        <option value="today_live">Hoy en vivo</option>
-        <option value="single_day">Fecha específica</option>
-        <option value="range">Rango</option>
-      </select>
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="today_live">Hoy en vivo</button>
+      <button class="mode-tab" data-mode="single_day">Fecha específica</button>
+      <button class="mode-tab" data-mode="range">Rango</button>
     </div>
 
-    <div class="field" id="businessDateField">
-      <label for="business_date">Fecha</label>
-      <input type="date" id="business_date" />
-    </div>
+    <div class="filters-row">
+      <div class="field hidden" id="businessDateField">
+        <label for="business_date">Fecha</label>
+        <input type="date" id="business_date" />
+      </div>
 
-    <div class="field hidden" id="dateStartField">
-      <label for="date_start">Fecha inicio</label>
-      <input type="date" id="date_start" />
-    </div>
+      <div class="field hidden" id="dateStartField">
+        <label for="date_start">Fecha inicio</label>
+        <input type="date" id="date_start" />
+      </div>
 
-    <div class="field hidden" id="dateEndField">
-      <label for="date_end">Fecha fin</label>
-      <input type="date" id="date_end" />
-    </div>
+      <div class="field hidden" id="dateEndField">
+        <label for="date_end">Fecha fin</label>
+        <input type="date" id="date_end" />
+      </div>
 
-    <div class="field" id="hourStartField">
-      <label for="hour_start">Hora inicio</label>
-      <input type="number" id="hour_start" min="0" max="23" placeholder="Ej: 12" />
-    </div>
+      <div class="field" id="hourBandField">
+        <label for="hour_band">Banda horaria</label>
+        <select id="hour_band">
+          <option value="">Manual</option>
+          <option value="apertura">Apertura · 08:00 - 12:00</option>
+          <option value="almuerzo">Almuerzo · 12:01 - 14:30</option>
+          <option value="valle">Valle · 14:31 - 18:00</option>
+          <option value="cena">Cena · 18:01 - 22:30</option>
+          <option value="valle2">Valle 2 · 22:31 - 03:00</option>
+        </select>
+      </div>
 
-    <div class="field" id="hourEndField">
-      <label for="hour_end">Hora fin</label>
-      <input type="number" id="hour_end" min="0" max="23" placeholder="Ej: 14" />
-    </div>
+      <div class="field" id="hourStartField">
+        <label for="hour_start">Hora inicio</label>
+        <input type="time" id="hour_start" />
+      </div>
 
-    <div class="field">
-      <button id="loadBtn">Cargar dashboard</button>
+      <div class="field" id="hourEndField">
+        <label for="hour_end">Hora fin</label>
+        <input type="time" id="hour_end" />
+      </div>
+
+      <div class="field">
+        <button id="loadBtn">Cargar dashboard</button>
+      </div>
     </div>
   </div>
 
@@ -325,6 +363,8 @@
     const API_URL_DAILY = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read';
     const API_URL_LIVE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read-live';
 
+    let currentMode = 'today_live';
+
     function todayChileIso() {
       const now = new Date();
       const formatter = new Intl.DateTimeFormat('en-CA', {
@@ -361,88 +401,185 @@
     }
 
     function sum(values) {
-      return values
-        .map(v => Number(v) || 0)
-        .reduce((a, b) => a + b, 0);
+      return values.map(v => Number(v) || 0).reduce((a, b) => a + b, 0);
     }
 
-    function getHourText(hourStart, hourEnd) {
-      if (hourStart !== null && hourStart !== undefined && hourEnd !== null && hourEnd !== undefined) {
-        return `${hourStart}:00 a ${hourEnd}:59`;
+    function timeToMinutes(value) {
+      if (!value) return null;
+      const [h, m] = value.split(':').map(Number);
+      if (Number.isNaN(h) || Number.isNaN(m)) return null;
+      return h * 60 + m;
+    }
+
+    function floorHour(minutes) {
+      if (minutes === null) return null;
+      return Math.floor(minutes / 60);
+    }
+
+    function ceilHourForApi(minutes) {
+      if (minutes === null) return null;
+      return Math.floor(minutes / 60);
+    }
+
+    function getBandRange(band) {
+      switch (band) {
+        case 'apertura':
+          return { start: '08:00', end: '12:00', crossMidnight: false, label: 'Apertura · 08:00 a 12:00' };
+        case 'almuerzo':
+          return { start: '12:01', end: '14:30', crossMidnight: false, label: 'Almuerzo · 12:01 a 14:30' };
+        case 'valle':
+          return { start: '14:31', end: '18:00', crossMidnight: false, label: 'Valle · 14:31 a 18:00' };
+        case 'cena':
+          return { start: '18:01', end: '22:30', crossMidnight: false, label: 'Cena · 18:01 a 22:30' };
+        case 'valle2':
+          return { start: '22:31', end: '03:00', crossMidnight: true, label: 'Valle 2 · 22:31 a 03:00' };
+        default:
+          return null;
       }
-      if (hourStart !== null && hourStart !== undefined) return `Desde ${hourStart}:00`;
-      if (hourEnd !== null && hourEnd !== undefined) return `Hasta ${hourEnd}:59`;
-      return '-';
+    }
+
+    function updateModeTabs() {
+      document.querySelectorAll('.mode-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === currentMode);
+      });
     }
 
     function updateFieldVisibility() {
-      const mode = document.getElementById('mode').value;
-
       const businessDateField = document.getElementById('businessDateField');
       const dateStartField = document.getElementById('dateStartField');
       const dateEndField = document.getElementById('dateEndField');
+      const hourBandField = document.getElementById('hourBandField');
       const hourStartField = document.getElementById('hourStartField');
       const hourEndField = document.getElementById('hourEndField');
 
-      if (mode === 'today_live') {
+      if (currentMode === 'today_live') {
         businessDateField.classList.add('hidden');
         dateStartField.classList.add('hidden');
         dateEndField.classList.add('hidden');
+        hourBandField.classList.remove('hidden');
         hourStartField.classList.remove('hidden');
         hourEndField.classList.remove('hidden');
-      } else if (mode === 'single_day') {
+      } else if (currentMode === 'single_day') {
         businessDateField.classList.remove('hidden');
         dateStartField.classList.add('hidden');
         dateEndField.classList.add('hidden');
+        hourBandField.classList.remove('hidden');
         hourStartField.classList.remove('hidden');
         hourEndField.classList.remove('hidden');
       } else {
         businessDateField.classList.add('hidden');
         dateStartField.classList.remove('hidden');
         dateEndField.classList.remove('hidden');
+        hourBandField.classList.add('hidden');
         hourStartField.classList.add('hidden');
         hourEndField.classList.add('hidden');
       }
     }
 
-    function buildRequest() {
-      const mode = document.getElementById('mode').value;
-      const businessDate = document.getElementById('business_date').value;
-      const dateStart = document.getElementById('date_start').value;
-      const dateEnd = document.getElementById('date_end').value;
-      const hourStart = document.getElementById('hour_start').value;
-      const hourEnd = document.getElementById('hour_end').value;
+    function applyHourBand() {
+      const band = document.getElementById('hour_band').value;
+      const config = getBandRange(band);
+      if (!config) return;
 
-      let url;
+      document.getElementById('hour_start').value = config.start;
+      document.getElementById('hour_end').value = config.end;
+    }
 
-      if (mode === 'today_live') {
-        url = new URL(API_URL_LIVE);
-        url.searchParams.set('business_date', todayChileIso());
+    function getHourLabel(hourStart, hourEnd, hourBand) {
+      const bandConfig = getBandRange(hourBand);
+      if (bandConfig) return bandConfig.label;
+      if (hourStart && hourEnd) return `${hourStart} a ${hourEnd}`;
+      if (hourStart) return `Desde ${hourStart}`;
+      if (hourEnd) return `Hasta ${hourEnd}`;
+      return '-';
+    }
 
-        if (hourStart !== '') url.searchParams.set('hour_start', hourStart);
-        if (hourEnd !== '') url.searchParams.set('hour_end', hourEnd);
-      } else if (mode === 'single_day') {
-        url = new URL(API_URL_LIVE);
+    function normalizeRows(payload, requestMode) {
+      const rows = payload.data || [];
 
-        if (businessDate) {
-          url.searchParams.set('business_date', businessDate);
-        }
-
-        if (hourStart !== '') url.searchParams.set('hour_start', hourStart);
-        if (hourEnd !== '') url.searchParams.set('hour_end', hourEnd);
-      } else {
-        url = new URL(API_URL_DAILY);
-
-        if (dateStart && dateEnd) {
-          url.searchParams.set('date_start', dateStart);
-          url.searchParams.set('date_end', dateEnd);
-        }
+      if (requestMode === 'range') {
+        return rows.map(row => ({
+          business_date: row.business_date,
+          store_uuid: row.store_uuid,
+          store_name: row.store_name,
+          deliveries_total: row.deliveries_total ?? row.orders_total ?? 0,
+          pick_minutes: row.collection_minutes ?? null,
+          delivery_minutes: row.trip_minutes ?? null,
+          e2e_minutes: row.delivery_minutes ?? null,
+          promise_minutes: row.promise_minutes ?? null,
+          on_time_pct: row.on_time_pct ?? null
+        }));
       }
 
-      return {
-        mode,
-        url: url.toString()
-      };
+      return rows.map(row => ({
+        business_date: row.business_date,
+        store_uuid: row.store_uuid,
+        store_name: row.store_name,
+        deliveries_total: row.deliveries_total ?? row.orders_total ?? 0,
+        pick_minutes: row.pick_minutes ?? null,
+        delivery_minutes: row.delivery_minutes ?? null,
+        e2e_minutes: row.e2e_minutes ?? null,
+        promise_minutes: row.promise_minutes ?? null,
+        on_time_pct: row.on_time_pct ?? null
+      }));
+    }
+
+    function filterRowsByTime(rows, hourStartText, hourEndText) {
+      if (!hourStartText && !hourEndText) return rows;
+
+      const startMin = timeToMinutes(hourStartText);
+      const endMin = timeToMinutes(hourEndText);
+
+      if (startMin === null || endMin === null) return rows;
+
+      const crossesMidnight = endMin < startMin;
+
+      return rows.filter(row => {
+        if (row.created_at) {
+          const d = new Date(row.created_at);
+          if (!Number.isNaN(d.getTime())) {
+            const hh = d.toLocaleString('en-US', {
+              timeZone: 'America/Santiago',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            });
+            const [h, m] = hh.split(':').map(Number);
+            const rowMin = h * 60 + m;
+
+            if (crossesMidnight) {
+              return rowMin >= startMin || rowMin <= endMin;
+            }
+
+            return rowMin >= startMin && rowMin <= endMin;
+          }
+        }
+
+        const hour = Number(row.created_hour);
+        if (Number.isNaN(hour)) return true;
+
+        const rowApprox = hour * 60;
+
+        if (crossesMidnight) {
+          return rowApprox >= startMin || rowApprox <= endMin;
+        }
+
+        return rowApprox >= startMin && rowApprox <= endMin;
+      });
+    }
+
+    function sortRows(rows) {
+      return [...rows].sort((a, b) => {
+        const aOnTime = a.on_time_pct === null || a.on_time_pct === undefined ? 9999 : Number(a.on_time_pct);
+        const bOnTime = b.on_time_pct === null || b.on_time_pct === undefined ? 9999 : Number(b.on_time_pct);
+
+        if (aOnTime !== bOnTime) return aOnTime - bOnTime;
+
+        const aE2E = a.e2e_minutes === null || a.e2e_minutes === undefined ? -9999 : Number(a.e2e_minutes);
+        const bE2E = b.e2e_minutes === null || b.e2e_minutes === undefined ? -9999 : Number(b.e2e_minutes);
+
+        return bE2E - aE2E;
+      });
     }
 
     function getOnTimeClass(value) {
@@ -477,51 +614,7 @@
       return 'metric-green';
     }
 
-    function normalizeRows(payload, requestMode) {
-      const rows = payload.data || [];
-
-      if (requestMode === 'range') {
-        return rows.map(row => ({
-          business_date: row.business_date,
-          store_uuid: row.store_uuid,
-          store_name: row.store_name,
-          deliveries_total: row.deliveries_total ?? row.orders_total ?? 0,
-          pick_minutes: row.collection_minutes ?? null,
-          delivery_minutes: row.trip_minutes ?? null,
-          e2e_minutes: row.delivery_minutes ?? null,
-          promise_minutes: row.promise_minutes ?? null,
-          on_time_pct: row.on_time_pct ?? null
-        }));
-      }
-
-      return rows.map(row => ({
-        business_date: row.business_date,
-        store_uuid: row.store_uuid,
-        store_name: row.store_name,
-        deliveries_total: row.deliveries_total ?? row.orders_total ?? 0,
-        pick_minutes: row.pick_minutes ?? row.collection_minutes ?? null,
-        delivery_minutes: row.delivery_minutes ?? row.trip_minutes ?? null,
-        e2e_minutes: row.e2e_minutes ?? row.delivery_minutes ?? null,
-        promise_minutes: row.promise_minutes ?? null,
-        on_time_pct: row.on_time_pct ?? null
-      }));
-    }
-
-    function sortRows(rows) {
-      return [...rows].sort((a, b) => {
-        const aOnTime = a.on_time_pct === null || a.on_time_pct === undefined ? 9999 : Number(a.on_time_pct);
-        const bOnTime = b.on_time_pct === null || b.on_time_pct === undefined ? 9999 : Number(b.on_time_pct);
-
-        if (aOnTime !== bOnTime) return aOnTime - bOnTime;
-
-        const aE2E = a.e2e_minutes === null || a.e2e_minutes === undefined ? -9999 : Number(a.e2e_minutes);
-        const bE2E = b.e2e_minutes === null || b.e2e_minutes === undefined ? -9999 : Number(b.e2e_minutes);
-
-        return bE2E - aE2E;
-      });
-    }
-
-    function renderSummary(payload, requestMode, rows) {
+    function renderSummary(payload, requestMode, rows, hourLabel) {
       const totalDeliveries = sum(rows.map(r => r.deliveries_total));
       const pickAvg = avg(rows.map(r => r.pick_minutes));
       const deliveryAvg = avg(rows.map(r => r.delivery_minutes));
@@ -531,25 +624,21 @@
 
       let modeText = '-';
       let dateText = '-';
-      let hourText = '-';
 
       if (requestMode === 'today_live') {
         modeText = 'Hoy en vivo';
         dateText = payload.business_date || todayChileIso();
-        hourText = getHourText(payload.hour_start, payload.hour_end);
       } else if (requestMode === 'single_day') {
         modeText = 'Fecha específica';
         dateText = payload.business_date || '-';
-        hourText = getHourText(payload.hour_start, payload.hour_end);
-      } else if (requestMode === 'range') {
+      } else {
         modeText = 'Rango';
         dateText = `${payload.requested_date_start || '-'} a ${payload.requested_date_end || '-'}`;
-        hourText = '-';
       }
 
       document.getElementById('summaryMode').textContent = modeText;
       document.getElementById('summaryDate').textContent = dateText;
-      document.getElementById('summaryHour').textContent = hourText;
+      document.getElementById('summaryHour').textContent = hourLabel;
       document.getElementById('summaryStores').textContent = rows.length;
       document.getElementById('summaryDeliveries').textContent = totalDeliveries;
       document.getElementById('summaryPick').textContent = pickAvg !== null ? formatNumber(pickAvg) : '-';
@@ -601,6 +690,80 @@
       });
     }
 
+    function buildRequest() {
+      const businessDate = document.getElementById('business_date').value;
+      const dateStart = document.getElementById('date_start').value;
+      const dateEnd = document.getElementById('date_end').value;
+      const hourStartText = document.getElementById('hour_start').value;
+      const hourEndText = document.getElementById('hour_end').value;
+      const hourBand = document.getElementById('hour_band').value;
+
+      let url;
+      let hourLabel = '-';
+
+      if (currentMode === 'today_live') {
+        url = new URL(API_URL_LIVE);
+        url.searchParams.set('business_date', todayChileIso());
+
+        const startMin = timeToMinutes(hourStartText);
+        const endMin = timeToMinutes(hourEndText);
+
+        if (startMin !== null) {
+          url.searchParams.set('hour_start', String(floorHour(startMin)));
+        }
+
+        if (endMin !== null) {
+          if (endMin < startMin) {
+            url.searchParams.set('hour_start', '0');
+            url.searchParams.set('hour_end', '23');
+          } else {
+            url.searchParams.set('hour_end', String(ceilHourForApi(endMin)));
+          }
+        }
+
+        hourLabel = getHourLabel(hourStartText, hourEndText, hourBand);
+      } else if (currentMode === 'single_day') {
+        url = new URL(API_URL_LIVE);
+
+        if (businessDate) {
+          url.searchParams.set('business_date', businessDate);
+        }
+
+        const startMin = timeToMinutes(hourStartText);
+        const endMin = timeToMinutes(hourEndText);
+
+        if (startMin !== null) {
+          url.searchParams.set('hour_start', String(floorHour(startMin)));
+        }
+
+        if (endMin !== null) {
+          if (startMin !== null && endMin < startMin) {
+            url.searchParams.set('hour_start', '0');
+            url.searchParams.set('hour_end', '23');
+          } else {
+            url.searchParams.set('hour_end', String(ceilHourForApi(endMin)));
+          }
+        }
+
+        hourLabel = getHourLabel(hourStartText, hourEndText, hourBand);
+      } else {
+        url = new URL(API_URL_DAILY);
+
+        if (dateStart && dateEnd) {
+          url.searchParams.set('date_start', dateStart);
+          url.searchParams.set('date_end', dateEnd);
+        }
+      }
+
+      return {
+        mode: currentMode,
+        url: url.toString(),
+        hourStartText,
+        hourEndText,
+        hourLabel
+      };
+    }
+
     async function loadDashboard() {
       const status = document.getElementById('status');
       status.textContent = 'Cargando...';
@@ -618,32 +781,44 @@
           return;
         }
 
-        const normalizedRows = normalizeRows(payload, request.mode);
+        let normalizedRows = normalizeRows(payload, request.mode);
+
+        if (request.mode !== 'range') {
+          normalizedRows = filterRowsByTime(
+            normalizedRows,
+            request.hourStartText,
+            request.hourEndText
+          );
+        }
+
         const sortedRows = sortRows(normalizedRows);
 
-        const recordsCount =
-          payload.count ??
-          payload.count_stores ??
-          payload.data?.length ??
-          0;
-
-        status.textContent = `Carga exitosa. Registros: ${recordsCount}`;
-        renderSummary(payload, request.mode, sortedRows);
+        status.textContent = `Carga exitosa. Registros: ${sortedRows.length}`;
+        renderSummary(payload, request.mode, sortedRows, request.hourLabel);
         renderTable(sortedRows);
       } catch (error) {
-        status.textContent = `Error de conexión`;
+        status.textContent = 'Error de conexión';
         status.classList.add('error');
         console.error(error);
       }
     }
 
-    document.getElementById('mode').addEventListener('change', updateFieldVisibility);
+    document.querySelectorAll('.mode-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentMode = btn.dataset.mode;
+        updateModeTabs();
+        updateFieldVisibility();
+      });
+    });
+
+    document.getElementById('hour_band').addEventListener('change', applyHourBand);
     document.getElementById('loadBtn').addEventListener('click', loadDashboard);
 
     document.getElementById('business_date').value = todayChileIso();
     document.getElementById('date_start').value = todayChileIso();
     document.getElementById('date_end').value = todayChileIso();
 
+    updateModeTabs();
     updateFieldVisibility();
     loadDashboard();
   </script>
