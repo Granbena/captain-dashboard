@@ -118,6 +118,27 @@
       word-break: break-word;
     }
 
+    .card-subtle {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #777;
+    }
+
+    .compare-positive {
+      color: #15803d;
+      font-weight: 700;
+    }
+
+    .compare-negative {
+      color: #b91c1c;
+      font-weight: 700;
+    }
+
+    .compare-neutral {
+      color: #6b7280;
+      font-weight: 700;
+    }
+
     .table-header {
       display: flex;
       justify-content: space-between;
@@ -297,6 +318,11 @@
       </div>
 
       <div class="field">
+        <label for="store_filter">Buscar tienda</label>
+        <input type="text" id="store_filter" placeholder="Ej: Ñuñoa" />
+      </div>
+
+      <div class="field">
         <button id="loadBtn">Cargar dashboard</button>
       </div>
     </div>
@@ -331,6 +357,14 @@
         <div class="card-value" id="summaryDeliveries">0</div>
       </div>
       <div class="card">
+        <div class="card-title">No entregadas</div>
+        <div class="card-value" id="summaryNotDelivered">0</div>
+      </div>
+      <div class="card">
+        <div class="card-title">% completadas</div>
+        <div class="card-value" id="summaryCompletion">-</div>
+      </div>
+      <div class="card">
         <div class="card-title">Pick Prom.</div>
         <div class="card-value" id="summaryPick">-</div>
       </div>
@@ -349,6 +383,30 @@
       <div class="card">
         <div class="card-title">Promesa Prom.</div>
         <div class="card-value" id="summaryPromise">-</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Órdenes vs semana pasada</div>
+        <div class="card-value" id="summaryOrdersVs">-</div>
+        <div class="card-subtle" id="summaryOrdersVsLabel">Comparación mismo día semana pasada</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">OnTime vs semana pasada</div>
+        <div class="card-value" id="summaryOnTimeVs">-</div>
+        <div class="card-subtle" id="summaryOnTimeVsLabel">Comparación mismo día semana pasada</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">E2E vs semana pasada</div>
+        <div class="card-value" id="summaryE2EVs">-</div>
+        <div class="card-subtle" id="summaryE2EVsLabel">Comparación mismo día semana pasada</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Delivery vs semana pasada</div>
+        <div class="card-value" id="summaryDeliveryVs">-</div>
+        <div class="card-subtle" id="summaryDeliveryVsLabel">Comparación mismo día semana pasada</div>
       </div>
     </div>
   </div>
@@ -421,6 +479,13 @@
         day: '2-digit',
       });
       return formatter.format(now);
+    }
+
+    function getSameDayLastWeek(dateStr) {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day));
+      date.setUTCDate(date.getUTCDate() - 7);
+      return date.toISOString().slice(0, 10);
     }
 
     function formatNumber(value, decimals = 2) {
@@ -657,14 +722,76 @@
       return 'metric-green';
     }
 
-    function renderSummary(payload, requestMode, rows, hourLabel) {
+    function filterRowsByStore(rows) {
+      const storeFilter = document.getElementById('store_filter').value.trim().toLowerCase();
+
+      if (!storeFilter) return rows;
+
+      return rows.filter(row =>
+        (row.store_name || '').toLowerCase().includes(storeFilter)
+      );
+    }
+
+    function getSummaryStats(rows) {
       const totalOrders = sum(rows.map(r => r.orders_total));
       const totalDeliveries = sum(rows.map(r => r.deliveries_total));
-      const pickAvg = avg(rows.map(r => r.pick_minutes));
-      const deliveryAvg = avg(rows.map(r => r.delivery_minutes));
-      const e2eAvg = avg(rows.map(r => r.e2e_minutes));
-      const promiseAvg = avg(rows.map(r => r.promise_minutes));
-      const onTimeAvg = avg(rows.map(r => r.on_time_pct));
+      const notDelivered = totalOrders - totalDeliveries;
+      const completionRate = totalOrders > 0 ? (totalDeliveries / totalOrders) * 100 : null;
+
+      return {
+        totalOrders,
+        totalDeliveries,
+        notDelivered,
+        completionRate,
+        pickAvg: avg(rows.map(r => r.pick_minutes)),
+        deliveryAvg: avg(rows.map(r => r.delivery_minutes)),
+        e2eAvg: avg(rows.map(r => r.e2e_minutes)),
+        promiseAvg: avg(rows.map(r => r.promise_minutes)),
+        onTimeAvg: avg(rows.map(r => r.on_time_pct)),
+      };
+    }
+
+    function formatDiffPercent(current, previous, invertGood = false) {
+      if (current === null || previous === null || previous === 0) {
+        return { text: '-', className: 'compare-neutral' };
+      }
+
+      const diff = ((current - previous) / previous) * 100;
+      const absText = `${diff > 0 ? '+' : ''}${diff.toFixed(1)}%`;
+
+      let isPositiveVisual = diff > 0;
+      if (invertGood) {
+        isPositiveVisual = diff < 0;
+      }
+
+      const className =
+        diff === 0
+          ? 'compare-neutral'
+          : isPositiveVisual
+            ? 'compare-positive'
+            : 'compare-negative';
+
+      return { text: absText, className };
+    }
+
+    function setCompareCard(id, result, labelId, labelText) {
+      const el = document.getElementById(id);
+      const labelEl = document.getElementById(labelId);
+
+      el.textContent = result.text;
+      el.className = `card-value ${result.className}`;
+      labelEl.textContent = labelText;
+    }
+
+    function clearCompareCards() {
+      setCompareCard('summaryOrdersVs', { text: '-', className: 'compare-neutral' }, 'summaryOrdersVsLabel', 'Comparación mismo día semana pasada');
+      setCompareCard('summaryOnTimeVs', { text: '-', className: 'compare-neutral' }, 'summaryOnTimeVsLabel', 'Comparación mismo día semana pasada');
+      setCompareCard('summaryE2EVs', { text: '-', className: 'compare-neutral' }, 'summaryE2EVsLabel', 'Comparación mismo día semana pasada');
+      setCompareCard('summaryDeliveryVs', { text: '-', className: 'compare-neutral' }, 'summaryDeliveryVsLabel', 'Comparación mismo día semana pasada');
+    }
+
+    function renderSummary(payload, requestMode, rows, hourLabel) {
+      const stats = getSummaryStats(rows);
 
       let modeText = '-';
       let dateText = '-';
@@ -684,13 +811,51 @@
       document.getElementById('summaryDate').textContent = dateText;
       document.getElementById('summaryHour').textContent = hourLabel;
       document.getElementById('summaryStores').textContent = rows.length;
-      document.getElementById('summaryOrders').textContent = totalOrders;
-      document.getElementById('summaryDeliveries').textContent = totalDeliveries;
-      document.getElementById('summaryPick').textContent = pickAvg !== null ? formatNumber(pickAvg) : '-';
-      document.getElementById('summaryDelivery').textContent = deliveryAvg !== null ? formatNumber(deliveryAvg) : '-';
-      document.getElementById('summaryE2E').textContent = e2eAvg !== null ? formatNumber(e2eAvg) : '-';
-      document.getElementById('summaryOnTime').textContent = onTimeAvg !== null ? formatPercent(onTimeAvg) : '-';
-      document.getElementById('summaryPromise').textContent = promiseAvg !== null ? formatNumber(promiseAvg) : '-';
+      document.getElementById('summaryOrders').textContent = stats.totalOrders;
+      document.getElementById('summaryDeliveries').textContent = stats.totalDeliveries;
+      document.getElementById('summaryNotDelivered').textContent = stats.notDelivered;
+      document.getElementById('summaryCompletion').textContent = stats.completionRate !== null ? formatPercent(stats.completionRate) : '-';
+      document.getElementById('summaryPick').textContent = stats.pickAvg !== null ? formatNumber(stats.pickAvg) : '-';
+      document.getElementById('summaryDelivery').textContent = stats.deliveryAvg !== null ? formatNumber(stats.deliveryAvg) : '-';
+      document.getElementById('summaryE2E').textContent = stats.e2eAvg !== null ? formatNumber(stats.e2eAvg) : '-';
+      document.getElementById('summaryOnTime').textContent = stats.onTimeAvg !== null ? formatPercent(stats.onTimeAvg) : '-';
+      document.getElementById('summaryPromise').textContent = stats.promiseAvg !== null ? formatNumber(stats.promiseAvg) : '-';
+    }
+
+    function renderComparison(currentRowsInput, previousRowsInput, currentDate, previousDate) {
+      const currentRowsFiltered = filterRowsByStore(currentRowsInput);
+      const previousRowsFiltered = filterRowsByStore(previousRowsInput);
+
+      const currentStats = getSummaryStats(currentRowsFiltered);
+      const previousStats = getSummaryStats(previousRowsFiltered);
+
+      setCompareCard(
+        'summaryOrdersVs',
+        formatDiffPercent(currentStats.totalOrders, previousStats.totalOrders, false),
+        'summaryOrdersVsLabel',
+        `${currentDate} vs ${previousDate}`
+      );
+
+      setCompareCard(
+        'summaryOnTimeVs',
+        formatDiffPercent(currentStats.onTimeAvg, previousStats.onTimeAvg, false),
+        'summaryOnTimeVsLabel',
+        `${currentDate} vs ${previousDate}`
+      );
+
+      setCompareCard(
+        'summaryE2EVs',
+        formatDiffPercent(currentStats.e2eAvg, previousStats.e2eAvg, true),
+        'summaryE2EVsLabel',
+        `${currentDate} vs ${previousDate}`
+      );
+
+      setCompareCard(
+        'summaryDeliveryVs',
+        formatDiffPercent(currentStats.deliveryAvg, previousStats.deliveryAvg, true),
+        'summaryDeliveryVsLabel',
+        `${currentDate} vs ${previousDate}`
+      );
     }
 
     function renderTable(rows) {
@@ -747,10 +912,12 @@
       let url;
       let hourLabel = '-';
       let syncDate = null;
+      let compareDate = null;
 
       if (currentMode === 'today_live') {
         const today = todayChileIso();
         syncDate = today;
+        compareDate = getSameDayLastWeek(today);
 
         url = new URL(API_URL_LIVE);
         url.searchParams.set('business_date', today);
@@ -770,6 +937,7 @@
 
         if (businessDate) {
           syncDate = businessDate;
+          compareDate = getSameDayLastWeek(businessDate);
           url.searchParams.set('business_date', businessDate);
         }
 
@@ -800,7 +968,8 @@
         mode: currentMode,
         url: url.toString(),
         hourLabel,
-        syncDate
+        syncDate,
+        compareDate
       };
     }
 
@@ -824,6 +993,34 @@
       return payload;
     }
 
+    async function fetchLiveByDate(date, hourBand, hourStartText, hourEndText) {
+      const url = new URL(API_URL_LIVE);
+      url.searchParams.set('business_date', date);
+      url.searchParams.set('_ts', Date.now().toString());
+
+      if (hourBand === 'manual' && hourStartText && hourEndText) {
+        url.searchParams.set('time_start', hourStartText);
+        url.searchParams.set('time_end', hourEndText);
+      } else if (hourBand !== 'all_day' && hourBand !== 'manual') {
+        const config = getBandRange(hourBand);
+        url.searchParams.set('time_start', config.start);
+        url.searchParams.set('time_end', config.end);
+      }
+
+      const res = await fetch(url.toString(), {
+        method: 'GET',
+        cache: 'no-store'
+      });
+
+      const payload = await res.json();
+
+      if (!res.ok || !payload.ok) {
+        throw new Error(payload?.step || payload?.error || 'Error leyendo comparación');
+      }
+
+      return payload;
+    }
+
     async function loadDashboard() {
       const status = document.getElementById('status');
       status.textContent = 'Cargando...';
@@ -832,9 +1029,18 @@
       try {
         const request = buildRequest();
 
+        const hourBand = document.getElementById('hour_band').value;
+        const hourStartText = document.getElementById('hour_start').value;
+        const hourEndText = document.getElementById('hour_end').value;
+
         if (request.syncDate) {
           status.textContent = `Sincronizando ${request.syncDate} con Captain...`;
           await runSyncForDate(request.syncDate);
+        }
+
+        if (request.compareDate) {
+          status.textContent = `Sincronizando comparación ${request.compareDate}...`;
+          await runSyncForDate(request.compareDate);
         }
 
         status.textContent = 'Leyendo datos actualizados...';
@@ -854,13 +1060,31 @@
         }
 
         const normalizedRows = normalizeRows(payload, request.mode);
-        currentRows = normalizedRows;
+        const filteredRows = filterRowsByStore(normalizedRows);
+        currentRows = filteredRows;
         const sortedRows = sortRows(currentRows);
 
-        status.textContent = `Carga exitosa. Registros: ${sortedRows.length}`;
         renderSummary(payload, request.mode, sortedRows, request.hourLabel);
         renderTable(sortedRows);
         updateSortArrows();
+
+        if (request.compareDate && request.mode !== 'range') {
+          status.textContent = 'Leyendo comparación de semana pasada...';
+
+          const comparePayload = await fetchLiveByDate(
+            request.compareDate,
+            hourBand,
+            hourStartText,
+            hourEndText
+          );
+
+          const compareRows = normalizeRows(comparePayload, request.mode);
+          renderComparison(normalizedRows, compareRows, request.syncDate, request.compareDate);
+        } else {
+          clearCompareCards();
+        }
+
+        status.textContent = `Carga exitosa. Registros: ${sortedRows.length}`;
       } catch (error) {
         status.textContent = `Error de conexión o sync: ${error.message || error}`;
         status.classList.add('error');
@@ -896,6 +1120,12 @@
     document.getElementById('hour_band').addEventListener('change', applyHourBand);
     document.getElementById('loadBtn').addEventListener('click', loadDashboard);
 
+    document.getElementById('store_filter').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        loadDashboard();
+      }
+    });
+
     document.getElementById('business_date').value = todayChileIso();
     document.getElementById('date_start').value = todayChileIso();
     document.getElementById('date_end').value = todayChileIso();
@@ -904,6 +1134,7 @@
     updateModeTabs();
     updateFieldVisibility();
     updateSortArrows();
+    clearCompareCards();
     loadDashboard();
   </script>
 </body>
