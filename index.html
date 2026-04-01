@@ -406,6 +406,7 @@
   <script>
     const API_URL_DAILY = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read';
     const API_URL_LIVE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read-live';
+    const API_URL_SYNC = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-sync';
 
     let currentMode = 'today_live';
     let currentRows = [];
@@ -745,10 +746,14 @@
 
       let url;
       let hourLabel = '-';
+      let syncDate = null;
 
       if (currentMode === 'today_live') {
+        const today = todayChileIso();
+        syncDate = today;
+
         url = new URL(API_URL_LIVE);
-        url.searchParams.set('business_date', todayChileIso());
+        url.searchParams.set('business_date', today);
 
         if (hourBand === 'manual' && hourStartText && hourEndText) {
           url.searchParams.set('time_start', hourStartText);
@@ -764,6 +769,7 @@
         url = new URL(API_URL_LIVE);
 
         if (businessDate) {
+          syncDate = businessDate;
           url.searchParams.set('business_date', businessDate);
         }
 
@@ -788,11 +794,34 @@
         hourLabel = '-';
       }
 
+      url.searchParams.set('_ts', Date.now().toString());
+
       return {
         mode: currentMode,
         url: url.toString(),
-        hourLabel
+        hourLabel,
+        syncDate
       };
+    }
+
+    async function runSyncForDate(businessDate) {
+      const syncUrl = new URL(API_URL_SYNC);
+      syncUrl.searchParams.set('date_start', businessDate);
+      syncUrl.searchParams.set('date_end', businessDate);
+      syncUrl.searchParams.set('_ts', Date.now().toString());
+
+      const res = await fetch(syncUrl.toString(), {
+        method: 'GET',
+        cache: 'no-store'
+      });
+
+      const payload = await res.json();
+
+      if (!res.ok || !payload.ok) {
+        throw new Error(payload?.step || payload?.error || 'Error ejecutando sync');
+      }
+
+      return payload;
     }
 
     async function loadDashboard() {
@@ -802,7 +831,19 @@
 
       try {
         const request = buildRequest();
-        const res = await fetch(request.url);
+
+        if (request.syncDate) {
+          status.textContent = `Sincronizando ${request.syncDate} con Captain...`;
+          await runSyncForDate(request.syncDate);
+        }
+
+        status.textContent = 'Leyendo datos actualizados...';
+
+        const res = await fetch(request.url, {
+          method: 'GET',
+          cache: 'no-store'
+        });
+
         const payload = await res.json();
 
         if (!payload.ok) {
@@ -821,7 +862,7 @@
         renderTable(sortedRows);
         updateSortArrows();
       } catch (error) {
-        status.textContent = 'Error de conexión';
+        status.textContent = `Error de conexión o sync: ${error.message || error}`;
         status.classList.add('error');
         console.error(error);
       }
