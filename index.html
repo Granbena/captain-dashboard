@@ -13,12 +13,7 @@
     }
 
     h1 {
-      margin-bottom: 8px;
-    }
-
-    .subtle {
-      color: #666;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
     .filters, .summary, .table-wrap {
@@ -126,9 +121,9 @@
     .table-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: end;
       gap: 12px;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
       flex-wrap: wrap;
     }
 
@@ -140,6 +135,13 @@
     .table-subtle {
       color: #666;
       font-size: 13px;
+    }
+
+    .kpi-help {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 12px;
+      line-height: 1.5;
     }
 
     table {
@@ -161,6 +163,29 @@
       position: sticky;
       top: 0;
       z-index: 1;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    th.sortable {
+      cursor: pointer;
+    }
+
+    th.sortable:hover {
+      background: #f3f4f6;
+    }
+
+    .sort-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sort-arrow {
+      font-size: 11px;
+      color: #6b7280;
+      min-width: 10px;
+      display: inline-block;
     }
 
     tbody tr:hover {
@@ -220,17 +245,10 @@
     .align-right {
       text-align: right;
     }
-
-    .small-note {
-      font-size: 12px;
-      color: #666;
-      margin-top: 8px;
-    }
   </style>
 </head>
 <body>
   <h1>Captain KPI Dashboard</h1>
-  <div class="subtle">Vista operativa por tienda con filtro horario y KPI reales</div>
 
   <div class="filters">
     <div class="mode-tabs">
@@ -339,30 +357,50 @@
     <div class="table-header">
       <div>
         <div class="table-title">Detalle por tienda</div>
-        <div class="table-subtle">Ordenado por peor OnTime y luego por mayor E2E</div>
+        <div class="table-subtle">Haz clic en cualquier KPI para ordenar</div>
       </div>
+    </div>
+
+    <div class="kpi-help">
+      <strong>Pick</strong> = desde creación hasta retiro ·
+      <strong>Delivery</strong> = desde retiro hasta entrega ·
+      <strong>E2E</strong> = desde creación hasta entrega
     </div>
 
     <table>
       <thead>
         <tr>
-          <th>Business Date</th>
-          <th>Tienda</th>
-          <th class="align-right">Órdenes</th>
-          <th class="align-right">Entregas</th>
-          <th class="align-right">Pick</th>
-          <th class="align-right">Delivery</th>
-          <th class="align-right">E2E</th>
-          <th class="align-right">Promesa</th>
-          <th class="align-right">OnTime %</th>
+          <th class="sortable" data-sort-key="business_date">
+            <span class="sort-label">Business Date <span class="sort-arrow" data-arrow-for="business_date"></span></span>
+          </th>
+          <th class="sortable" data-sort-key="store_name">
+            <span class="sort-label">Tienda <span class="sort-arrow" data-arrow-for="store_name"></span></span>
+          </th>
+          <th class="sortable align-right" data-sort-key="orders_total">
+            <span class="sort-label">Órdenes <span class="sort-arrow" data-arrow-for="orders_total"></span></span>
+          </th>
+          <th class="sortable align-right" data-sort-key="deliveries_total">
+            <span class="sort-label">Entregas <span class="sort-arrow" data-arrow-for="deliveries_total"></span></span>
+          </th>
+          <th class="sortable align-right" data-sort-key="pick_minutes">
+            <span class="sort-label">Pick <span class="sort-arrow" data-arrow-for="pick_minutes"></span></span>
+          </th>
+          <th class="sortable align-right" data-sort-key="delivery_minutes">
+            <span class="sort-label">Delivery <span class="sort-arrow" data-arrow-for="delivery_minutes"></span></span>
+          </th>
+          <th class="sortable align-right" data-sort-key="e2e_minutes">
+            <span class="sort-label">E2E <span class="sort-arrow" data-arrow-for="e2e_minutes"></span></span>
+          </th>
+          <th class="sortable align-right" data-sort-key="promise_minutes">
+            <span class="sort-label">Promesa <span class="sort-arrow" data-arrow-for="promise_minutes"></span></span>
+          </th>
+          <th class="sortable align-right" data-sort-key="on_time_pct">
+            <span class="sort-label">OnTime % <span class="sort-arrow" data-arrow-for="on_time_pct"></span></span>
+          </th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
     </table>
-
-    <div class="small-note">
-      Pick = desde creación hasta retiro. Delivery = desde retiro hasta entrega. E2E = desde creación hasta entrega.
-    </div>
   </div>
 
   <script>
@@ -370,6 +408,8 @@
     const API_URL_LIVE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read-live';
 
     let currentMode = 'today_live';
+    let currentRows = [];
+    let currentSort = { key: 'on_time_pct', direction: 'asc' };
 
     function todayChileIso() {
       const now = new Date();
@@ -413,15 +453,15 @@
     function getBandRange(band) {
       switch (band) {
         case 'apertura':
-          return { start: '08:00', end: '12:00', label: 'Apertura · 08:00 a 12:00' };
+          return { start: '08:00', end: '12:00', label: 'Apertura' };
         case 'almuerzo':
-          return { start: '12:01', end: '14:30', label: 'Almuerzo · 12:01 a 14:30' };
+          return { start: '12:01', end: '14:30', label: 'Almuerzo' };
         case 'valle':
-          return { start: '14:31', end: '18:00', label: 'Valle · 14:31 a 18:00' };
+          return { start: '14:31', end: '18:00', label: 'Valle' };
         case 'cena':
-          return { start: '18:01', end: '22:30', label: 'Cena · 18:01 a 22:30' };
+          return { start: '18:01', end: '22:30', label: 'Cena' };
         case 'valle2':
-          return { start: '22:31', end: '03:00', label: 'Valle 2 · 22:31 a 03:00' };
+          return { start: '22:31', end: '03:00', label: 'Valle 2' };
         case 'manual':
           return { start: '', end: '', label: 'Manual' };
         case 'all_day':
@@ -493,7 +533,7 @@
       const config = getBandRange(hourBand);
       if (hourBand && hourBand !== 'manual' && hourBand !== 'all_day' && config) return config.label;
       if (hourBand === 'all_day') return 'Todo el día';
-      if (hourBand === 'manual' && hourStart && hourEnd) return `${hourStart} a ${hourEnd}`;
+      if (hourBand === 'manual' && hourStart && hourEnd) return 'Manual';
       if (hourBand === 'manual') return 'Manual';
       return '-';
     }
@@ -530,18 +570,58 @@
       }));
     }
 
+    function compareValues(a, b, direction = 'asc') {
+      const aNull = a === null || a === undefined || a === '';
+      const bNull = b === null || b === undefined || b === '';
+
+      if (aNull && bNull) return 0;
+      if (aNull) return 1;
+      if (bNull) return -1;
+
+      const aNum = Number(a);
+      const bNum = Number(b);
+      const bothNumeric = !Number.isNaN(aNum) && !Number.isNaN(bNum);
+
+      let result = 0;
+
+      if (bothNumeric) {
+        result = aNum - bNum;
+      } else {
+        result = String(a).localeCompare(String(b), 'es');
+      }
+
+      return direction === 'asc' ? result : -result;
+    }
+
     function sortRows(rows) {
+      const { key, direction } = currentSort;
+
       return [...rows].sort((a, b) => {
-        const aOnTime = a.on_time_pct === null || a.on_time_pct === undefined ? 9999 : Number(a.on_time_pct);
-        const bOnTime = b.on_time_pct === null || b.on_time_pct === undefined ? 9999 : Number(b.on_time_pct);
+        const primary = compareValues(a[key], b[key], direction);
+        if (primary !== 0) return primary;
 
-        if (aOnTime !== bOnTime) return aOnTime - bOnTime;
+        if (key !== 'on_time_pct') {
+          const fallback = compareValues(a.on_time_pct, b.on_time_pct, 'asc');
+          if (fallback !== 0) return fallback;
+        }
 
-        const aE2E = a.e2e_minutes === null || a.e2e_minutes === undefined ? -9999 : Number(a.e2e_minutes);
-        const bE2E = b.e2e_minutes === null || b.e2e_minutes === undefined ? -9999 : Number(b.e2e_minutes);
+        if (key !== 'e2e_minutes') {
+          const fallback2 = compareValues(a.e2e_minutes, b.e2e_minutes, 'desc');
+          if (fallback2 !== 0) return fallback2;
+        }
 
-        return bE2E - aE2E;
+        return compareValues(a.store_name, b.store_name, 'asc');
       });
+    }
+
+    function updateSortArrows() {
+      document.querySelectorAll('.sort-arrow').forEach(el => {
+        el.textContent = '';
+      });
+
+      const arrow = document.querySelector(`[data-arrow-for="${currentSort.key}"]`);
+      if (!arrow) return;
+      arrow.textContent = currentSort.direction === 'asc' ? '▲' : '▼';
     }
 
     function getOnTimeClass(value) {
@@ -733,11 +813,13 @@
         }
 
         const normalizedRows = normalizeRows(payload, request.mode);
-        const sortedRows = sortRows(normalizedRows);
+        currentRows = normalizedRows;
+        const sortedRows = sortRows(currentRows);
 
         status.textContent = `Carga exitosa. Registros: ${sortedRows.length}`;
         renderSummary(payload, request.mode, sortedRows, request.hourLabel);
         renderTable(sortedRows);
+        updateSortArrows();
       } catch (error) {
         status.textContent = 'Error de conexión';
         status.classList.add('error');
@@ -753,6 +835,23 @@
       });
     });
 
+    document.querySelectorAll('th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.sortKey;
+
+        if (currentSort.key === key) {
+          currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+          currentSort.key = key;
+          currentSort.direction = ['store_name', 'business_date'].includes(key) ? 'asc' : 'desc';
+        }
+
+        const sortedRows = sortRows(currentRows);
+        renderTable(sortedRows);
+        updateSortArrows();
+      });
+    });
+
     document.getElementById('hour_band').addEventListener('change', applyHourBand);
     document.getElementById('loadBtn').addEventListener('click', loadDashboard);
 
@@ -763,6 +862,7 @@
 
     updateModeTabs();
     updateFieldVisibility();
+    updateSortArrows();
     loadDashboard();
   </script>
 </body>
