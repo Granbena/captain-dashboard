@@ -410,35 +410,23 @@
       return values.map(v => Number(v) || 0).reduce((a, b) => a + b, 0);
     }
 
-    function timeToMinutes(value) {
-      if (!value) return null;
-      const [h, m] = value.split(':').map(Number);
-      if (Number.isNaN(h) || Number.isNaN(m)) return null;
-      return h * 60 + m;
-    }
-
-    function floorHour(minutes) {
-      if (minutes === null) return null;
-      return Math.floor(minutes / 60);
-    }
-
     function getBandRange(band) {
       switch (band) {
         case 'apertura':
-          return { start: '08:00', end: '12:00', crossMidnight: false, label: 'Apertura · 08:00 a 12:00' };
+          return { start: '08:00', end: '12:00', label: 'Apertura · 08:00 a 12:00' };
         case 'almuerzo':
-          return { start: '12:01', end: '14:30', crossMidnight: false, label: 'Almuerzo · 12:01 a 14:30' };
+          return { start: '12:01', end: '14:30', label: 'Almuerzo · 12:01 a 14:30' };
         case 'valle':
-          return { start: '14:31', end: '18:00', crossMidnight: false, label: 'Valle · 14:31 a 18:00' };
+          return { start: '14:31', end: '18:00', label: 'Valle · 14:31 a 18:00' };
         case 'cena':
-          return { start: '18:01', end: '22:30', crossMidnight: false, label: 'Cena · 18:01 a 22:30' };
+          return { start: '18:01', end: '22:30', label: 'Cena · 18:01 a 22:30' };
         case 'valle2':
-          return { start: '22:31', end: '03:00', crossMidnight: true, label: 'Valle 2 · 22:31 a 03:00' };
+          return { start: '22:31', end: '03:00', label: 'Valle 2 · 22:31 a 03:00' };
         case 'manual':
-          return { start: '', end: '', crossMidnight: false, label: 'Manual' };
+          return { start: '', end: '', label: 'Manual' };
         case 'all_day':
         default:
-          return { start: '', end: '', crossMidnight: false, label: 'Todo el día' };
+          return { start: '', end: '', label: 'Todo el día' };
       }
     }
 
@@ -683,82 +671,46 @@
         url.searchParams.set('business_date', todayChileIso());
 
         if (hourBand === 'manual' && hourStartText && hourEndText) {
-          const startMin = timeToMinutes(hourStartText);
-          const endMin = timeToMinutes(hourEndText);
-
-          if (startMin !== null && endMin !== null) {
-            if (endMin < startMin) {
-              url.searchParams.set('hour_start', '0');
-              url.searchParams.set('hour_end', '23');
-            } else {
-              url.searchParams.set('hour_start', String(floorHour(startMin)));
-              url.searchParams.set('hour_end', String(floorHour(endMin)));
-            }
-          }
+          url.searchParams.set('time_start', hourStartText);
+          url.searchParams.set('time_end', hourEndText);
         } else if (hourBand !== 'all_day' && hourBand !== 'manual') {
           const config = getBandRange(hourBand);
-          const startMin = timeToMinutes(config.start);
-          const endMin = timeToMinutes(config.end);
-
-          if (config.crossMidnight) {
-            url.searchParams.set('hour_start', '0');
-            url.searchParams.set('hour_end', '23');
-          } else {
-            url.searchParams.set('hour_start', String(floorHour(startMin)));
-            url.searchParams.set('hour_end', String(floorHour(endMin)));
-          }
+          url.searchParams.set('time_start', config.start);
+          url.searchParams.set('time_end', config.end);
         }
 
         hourLabel = getHourLabel(hourBand, hourStartText, hourEndText);
       } else if (currentMode === 'single_day') {
         url = new URL(API_URL_LIVE);
+
         if (businessDate) {
           url.searchParams.set('business_date', businessDate);
         }
 
         if (hourBand === 'manual' && hourStartText && hourEndText) {
-          const startMin = timeToMinutes(hourStartText);
-          const endMin = timeToMinutes(hourEndText);
-
-          if (startMin !== null && endMin !== null) {
-            if (endMin < startMin) {
-              url.searchParams.set('hour_start', '0');
-              url.searchParams.set('hour_end', '23');
-            } else {
-              url.searchParams.set('hour_start', String(floorHour(startMin)));
-              url.searchParams.set('hour_end', String(floorHour(endMin)));
-            }
-          }
+          url.searchParams.set('time_start', hourStartText);
+          url.searchParams.set('time_end', hourEndText);
         } else if (hourBand !== 'all_day' && hourBand !== 'manual') {
           const config = getBandRange(hourBand);
-          const startMin = timeToMinutes(config.start);
-          const endMin = timeToMinutes(config.end);
-
-          if (config.crossMidnight) {
-            url.searchParams.set('hour_start', '0');
-            url.searchParams.set('hour_end', '23');
-          } else {
-            url.searchParams.set('hour_start', String(floorHour(startMin)));
-            url.searchParams.set('hour_end', String(floorHour(endMin)));
-          }
+          url.searchParams.set('time_start', config.start);
+          url.searchParams.set('time_end', config.end);
         }
 
         hourLabel = getHourLabel(hourBand, hourStartText, hourEndText);
       } else {
         url = new URL(API_URL_DAILY);
+
         if (dateStart && dateEnd) {
           url.searchParams.set('date_start', dateStart);
           url.searchParams.set('date_end', dateEnd);
         }
+
         hourLabel = '-';
       }
 
       return {
         mode: currentMode,
         url: url.toString(),
-        hourBand,
-        hourStartText,
-        hourEndText,
         hourLabel
       };
     }
