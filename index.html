@@ -404,9 +404,9 @@
       </div>
 
       <div class="card">
-        <div class="card-title">Delivery vs semana pasada</div>
-        <div class="card-value" id="summaryDeliveryVs">-</div>
-        <div class="card-subtle" id="summaryDeliveryVsLabel">Comparación mismo día semana pasada</div>
+        <div class="card-title">Pick vs semana pasada</div>
+        <div class="card-value" id="summaryPickVs">-</div>
+        <div class="card-subtle" id="summaryPickVsLabel">Comparación mismo día semana pasada</div>
       </div>
     </div>
   </div>
@@ -469,6 +469,14 @@
     let currentMode = 'today_live';
     let currentRows = [];
     let currentSort = { key: 'on_time_pct', direction: 'asc' };
+
+    let lastBaseRows = [];
+    let lastCompareRows = [];
+    let lastPayload = null;
+    let lastHourLabel = '-';
+    let lastRequestMode = 'today_live';
+    let lastCurrentDate = null;
+    let lastCompareDate = null;
 
     function todayChileIso() {
       const now = new Date();
@@ -787,7 +795,7 @@
       setCompareCard('summaryOrdersVs', { text: '-', className: 'compare-neutral' }, 'summaryOrdersVsLabel', 'Comparación mismo día semana pasada');
       setCompareCard('summaryOnTimeVs', { text: '-', className: 'compare-neutral' }, 'summaryOnTimeVsLabel', 'Comparación mismo día semana pasada');
       setCompareCard('summaryE2EVs', { text: '-', className: 'compare-neutral' }, 'summaryE2EVsLabel', 'Comparación mismo día semana pasada');
-      setCompareCard('summaryDeliveryVs', { text: '-', className: 'compare-neutral' }, 'summaryDeliveryVsLabel', 'Comparación mismo día semana pasada');
+      setCompareCard('summaryPickVs', { text: '-', className: 'compare-neutral' }, 'summaryPickVsLabel', 'Comparación mismo día semana pasada');
     }
 
     function renderSummary(payload, requestMode, rows, hourLabel) {
@@ -851,9 +859,9 @@
       );
 
       setCompareCard(
-        'summaryDeliveryVs',
-        formatDiffPercent(currentStats.deliveryAvg, previousStats.deliveryAvg, true),
-        'summaryDeliveryVsLabel',
+        'summaryPickVs',
+        formatDiffPercent(currentStats.pickAvg, previousStats.pickAvg, true),
+        'summaryPickVsLabel',
         `${currentDate} vs ${previousDate}`
       );
     }
@@ -1021,6 +1029,28 @@
       return payload;
     }
 
+    function applyCurrentView() {
+      if (!lastPayload) return;
+
+      const filteredBaseRows = filterRowsByStore(lastBaseRows);
+      currentRows = filteredBaseRows;
+      const sortedRows = sortRows(currentRows);
+
+      renderSummary(lastPayload, lastRequestMode, sortedRows, lastHourLabel);
+      renderTable(sortedRows);
+      updateSortArrows();
+
+      if (lastRequestMode !== 'range' && lastCurrentDate && lastCompareDate && lastCompareRows.length) {
+        renderComparison(lastBaseRows, lastCompareRows, lastCurrentDate, lastCompareDate);
+      } else {
+        clearCompareCards();
+      }
+
+      const status = document.getElementById('status');
+      status.textContent = `Carga exitosa. Registros: ${sortedRows.length}`;
+      status.classList.remove('error');
+    }
+
     async function loadDashboard() {
       const status = document.getElementById('status');
       status.textContent = 'Cargando...';
@@ -1060,13 +1090,12 @@
         }
 
         const normalizedRows = normalizeRows(payload, request.mode);
-        const filteredRows = filterRowsByStore(normalizedRows);
-        currentRows = filteredRows;
-        const sortedRows = sortRows(currentRows);
 
-        renderSummary(payload, request.mode, sortedRows, request.hourLabel);
-        renderTable(sortedRows);
-        updateSortArrows();
+        lastBaseRows = normalizedRows;
+        lastPayload = payload;
+        lastHourLabel = request.hourLabel;
+        lastRequestMode = request.mode;
+        lastCurrentDate = request.syncDate;
 
         if (request.compareDate && request.mode !== 'range') {
           status.textContent = 'Leyendo comparación de semana pasada...';
@@ -1078,13 +1107,14 @@
             hourEndText
           );
 
-          const compareRows = normalizeRows(comparePayload, request.mode);
-          renderComparison(normalizedRows, compareRows, request.syncDate, request.compareDate);
+          lastCompareRows = normalizeRows(comparePayload, request.mode);
+          lastCompareDate = request.compareDate;
         } else {
-          clearCompareCards();
+          lastCompareRows = [];
+          lastCompareDate = null;
         }
 
-        status.textContent = `Carga exitosa. Registros: ${sortedRows.length}`;
+        applyCurrentView();
       } catch (error) {
         status.textContent = `Error de conexión o sync: ${error.message || error}`;
         status.classList.add('error');
@@ -1120,10 +1150,8 @@
     document.getElementById('hour_band').addEventListener('change', applyHourBand);
     document.getElementById('loadBtn').addEventListener('click', loadDashboard);
 
-    document.getElementById('store_filter').addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        loadDashboard();
-      }
+    document.getElementById('store_filter').addEventListener('input', () => {
+      applyCurrentView();
     });
 
     document.getElementById('business_date').value = todayChileIso();
