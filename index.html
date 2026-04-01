@@ -16,7 +16,7 @@
       margin-bottom: 16px;
     }
 
-    .filters, .summary, .table-wrap {
+    .filters, .summary, .table-wrap, .charts-wrap {
       background: white;
       padding: 16px;
       border-radius: 12px;
@@ -88,7 +88,7 @@
     }
 
     .hidden {
-      display: none;
+      display: none !important;
     }
 
     .summary-grid {
@@ -139,7 +139,7 @@
       font-weight: 700;
     }
 
-    .table-header {
+    .table-header, .charts-header {
       display: flex;
       justify-content: space-between;
       align-items: end;
@@ -148,12 +148,12 @@
       flex-wrap: wrap;
     }
 
-    .table-title {
+    .table-title, .charts-title {
       font-weight: 700;
       font-size: 18px;
     }
 
-    .table-subtle {
+    .table-subtle, .charts-subtle {
       color: #666;
       font-size: 13px;
     }
@@ -163,6 +163,31 @@
       color: #666;
       margin-bottom: 12px;
       line-height: 1.5;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .chart-card {
+      background: #fafafa;
+      border: 1px solid #ececec;
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .chart-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .chart-box {
+      position: relative;
+      height: 260px;
     }
 
     table {
@@ -411,11 +436,43 @@
     </div>
   </div>
 
+  <div class="charts-wrap hidden" id="rangeChartsSection">
+    <div class="charts-header">
+      <div>
+        <div class="charts-title">Tendencia del rango</div>
+        <div class="charts-subtle">Vista diaria consolidada del período seleccionado</div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Órdenes por día</div>
+        <div class="chart-box">
+          <canvas id="ordersChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">On Time por día</div>
+        <div class="chart-box">
+          <canvas id="onTimeChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">E2E por día</div>
+        <div class="chart-box">
+          <canvas id="e2eChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="table-wrap">
     <div class="table-header">
       <div>
-        <div class="table-title">Detalle por tienda</div>
-        <div class="table-subtle">Haz clic en cualquier KPI para ordenar</div>
+        <div class="table-title" id="tableTitle">Detalle por tienda</div>
+        <div class="table-subtle" id="tableSubtle">Haz clic en cualquier KPI para ordenar</div>
       </div>
     </div>
 
@@ -461,6 +518,7 @@
     </table>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     const API_URL_DAILY = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read';
     const API_URL_LIVE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read-live';
@@ -477,6 +535,10 @@
     let lastRequestMode = 'today_live';
     let lastCurrentDate = null;
     let lastCompareDate = null;
+
+    let ordersChartInstance = null;
+    let onTimeChartInstance = null;
+    let e2eChartInstance = null;
 
     function todayChileIso() {
       const now = new Date();
@@ -866,6 +928,174 @@
       );
     }
 
+    function consolidateRangeRows(rows) {
+      const grouped = new Map();
+
+      rows.forEach(row => {
+        const key = row.store_uuid || row.store_name;
+
+        if (!grouped.has(key)) {
+          grouped.set(key, {
+            business_date: '',
+            store_uuid: row.store_uuid,
+            store_name: row.store_name,
+            orders_total: 0,
+            deliveries_total: 0,
+            pick_values: [],
+            delivery_values: [],
+            e2e_values: [],
+            promise_values: [],
+            on_time_values: [],
+          });
+        }
+
+        const item = grouped.get(key);
+        item.orders_total += Number(row.orders_total) || 0;
+        item.deliveries_total += Number(row.deliveries_total) || 0;
+
+        if (row.pick_minutes !== null && row.pick_minutes !== undefined) item.pick_values.push(Number(row.pick_minutes));
+        if (row.delivery_minutes !== null && row.delivery_minutes !== undefined) item.delivery_values.push(Number(row.delivery_minutes));
+        if (row.e2e_minutes !== null && row.e2e_minutes !== undefined) item.e2e_values.push(Number(row.e2e_minutes));
+        if (row.promise_minutes !== null && row.promise_minutes !== undefined) item.promise_values.push(Number(row.promise_minutes));
+        if (row.on_time_pct !== null && row.on_time_pct !== undefined) item.on_time_values.push(Number(row.on_time_pct));
+      });
+
+      return Array.from(grouped.values()).map(item => ({
+        business_date: '-',
+        store_uuid: item.store_uuid,
+        store_name: item.store_name,
+        orders_total: item.orders_total,
+        deliveries_total: item.deliveries_total,
+        pick_minutes: avg(item.pick_values),
+        delivery_minutes: avg(item.delivery_values),
+        e2e_minutes: avg(item.e2e_values),
+        promise_minutes: avg(item.promise_values),
+        on_time_pct: avg(item.on_time_values),
+      }));
+    }
+
+    function buildRangeDailySeries(rows) {
+      const grouped = new Map();
+
+      rows.forEach(row => {
+        const key = row.business_date;
+
+        if (!grouped.has(key)) {
+          grouped.set(key, {
+            business_date: row.business_date,
+            orders_total: 0,
+            deliveries_total: 0,
+            pick_values: [],
+            delivery_values: [],
+            e2e_values: [],
+            promise_values: [],
+            on_time_values: [],
+          });
+        }
+
+        const item = grouped.get(key);
+        item.orders_total += Number(row.orders_total) || 0;
+        item.deliveries_total += Number(row.deliveries_total) || 0;
+
+        if (row.pick_minutes !== null && row.pick_minutes !== undefined) item.pick_values.push(Number(row.pick_minutes));
+        if (row.delivery_minutes !== null && row.delivery_minutes !== undefined) item.delivery_values.push(Number(row.delivery_minutes));
+        if (row.e2e_minutes !== null && row.e2e_minutes !== undefined) item.e2e_values.push(Number(row.e2e_minutes));
+        if (row.promise_minutes !== null && row.promise_minutes !== undefined) item.promise_values.push(Number(row.promise_minutes));
+        if (row.on_time_pct !== null && row.on_time_pct !== undefined) item.on_time_values.push(Number(row.on_time_pct));
+      });
+
+      return Array.from(grouped.values())
+        .map(item => ({
+          business_date: item.business_date,
+          orders_total: item.orders_total,
+          on_time_pct: avg(item.on_time_values),
+          e2e_minutes: avg(item.e2e_values),
+        }))
+        .sort((a, b) => String(a.business_date).localeCompare(String(b.business_date)));
+    }
+
+    function destroyCharts() {
+      if (ordersChartInstance) {
+        ordersChartInstance.destroy();
+        ordersChartInstance = null;
+      }
+      if (onTimeChartInstance) {
+        onTimeChartInstance.destroy();
+        onTimeChartInstance = null;
+      }
+      if (e2eChartInstance) {
+        e2eChartInstance.destroy();
+        e2eChartInstance = null;
+      }
+    }
+
+    function renderRangeCharts(baseRows) {
+      const section = document.getElementById('rangeChartsSection');
+      section.classList.remove('hidden');
+
+      const filteredRows = filterRowsByStore(baseRows);
+      const series = buildRangeDailySeries(filteredRows);
+
+      destroyCharts();
+
+      const labels = series.map(r => r.business_date);
+      const ordersData = series.map(r => r.orders_total);
+      const onTimeData = series.map(r => r.on_time_pct);
+      const e2eData = series.map(r => r.e2e_minutes);
+
+      ordersChartInstance = new Chart(document.getElementById('ordersChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Órdenes',
+            data: ordersData
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+
+      onTimeChartInstance = new Chart(document.getElementById('onTimeChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'On Time %',
+            data: onTimeData,
+            tension: 0.25
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+
+      e2eChartInstance = new Chart(document.getElementById('e2eChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'E2E',
+            data: e2eData,
+            tension: 0.25
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    }
+
+    function hideRangeCharts() {
+      document.getElementById('rangeChartsSection').classList.add('hidden');
+      destroyCharts();
+    }
+
     function renderTable(rows) {
       const tbody = document.getElementById('tableBody');
       tbody.innerHTML = '';
@@ -1032,19 +1262,37 @@
     function applyCurrentView() {
       if (!lastPayload) return;
 
-      const filteredBaseRows = filterRowsByStore(lastBaseRows);
-      currentRows = filteredBaseRows;
+      const tableTitle = document.getElementById('tableTitle');
+      const tableSubtle = document.getElementById('tableSubtle');
+
+      let rowsForView = [];
+
+      if (lastRequestMode === 'range') {
+        const filteredBaseRows = filterRowsByStore(lastBaseRows);
+        rowsForView = consolidateRangeRows(filteredBaseRows);
+        tableTitle.textContent = 'Consolidado por tienda';
+        tableSubtle.textContent = 'Vista consolidada de todo el rango seleccionado';
+        renderRangeCharts(lastBaseRows);
+        clearCompareCards();
+      } else {
+        rowsForView = filterRowsByStore(lastBaseRows);
+        tableTitle.textContent = 'Detalle por tienda';
+        tableSubtle.textContent = 'Haz clic en cualquier KPI para ordenar';
+        hideRangeCharts();
+
+        if (lastCurrentDate && lastCompareDate && lastCompareRows.length) {
+          renderComparison(lastBaseRows, lastCompareRows, lastCurrentDate, lastCompareDate);
+        } else {
+          clearCompareCards();
+        }
+      }
+
+      currentRows = rowsForView;
       const sortedRows = sortRows(currentRows);
 
       renderSummary(lastPayload, lastRequestMode, sortedRows, lastHourLabel);
       renderTable(sortedRows);
       updateSortArrows();
-
-      if (lastRequestMode !== 'range' && lastCurrentDate && lastCompareDate && lastCompareRows.length) {
-        renderComparison(lastBaseRows, lastCompareRows, lastCurrentDate, lastCompareDate);
-      } else {
-        clearCompareCards();
-      }
 
       const status = document.getElementById('status');
       status.textContent = `Carga exitosa. Registros: ${sortedRows.length}`;
