@@ -1012,10 +1012,8 @@
     function formatShortDayLabel(dateStr) {
       const [year, month, day] = dateStr.split('-').map(Number);
       const date = new Date(Date.UTC(year, month - 1, day));
-
       const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
       const dayName = dayNames[date.getUTCDay()];
-
       return `${dayName} ${String(day).padStart(2, '0')}`;
     }
 
@@ -1292,24 +1290,14 @@
       return payload;
     }
 
-    async function runSyncForRange(dateStart, dateEnd) {
-      const syncUrl = new URL(API_URL_SYNC);
-      syncUrl.searchParams.set('date_start', dateStart);
-      syncUrl.searchParams.set('date_end', dateEnd);
-      syncUrl.searchParams.set('_ts', Date.now().toString());
+    async function runSyncForRangeByDay(dateStart, dateEnd, label) {
+      const dates = getDateRange(dateStart, dateEnd);
 
-      const res = await fetch(syncUrl.toString(), {
-        method: 'GET',
-        cache: 'no-store'
-      });
-
-      const payload = await res.json();
-
-      if (!res.ok || !payload.ok) {
-        throw new Error(payload?.step || payload?.error || 'Error ejecutando sync del rango');
+      for (let i = 0; i < dates.length; i++) {
+        const currentDate = dates[i];
+        document.getElementById('status').textContent = `${label}: sincronizando ${currentDate} (${i + 1}/${dates.length})...`;
+        await runSyncForDate(currentDate);
       }
-
-      return payload;
     }
 
     async function fetchLiveByDate(date, hourBand, hourStartText, hourEndText) {
@@ -1431,13 +1419,11 @@
         }
 
         if (request.mode === 'range' && request.dateStart && request.dateEnd) {
-          status.textContent = `Sincronizando rango ${request.dateStart} a ${request.dateEnd}...`;
-          await runSyncForRange(request.dateStart, request.dateEnd);
+          await runSyncForRangeByDay(request.dateStart, request.dateEnd, 'Rango actual');
         }
 
         if (request.mode === 'range' && request.rangePrevStart && request.rangePrevEnd) {
-          status.textContent = `Sincronizando rango anterior ${request.rangePrevStart} a ${request.rangePrevEnd}...`;
-          await runSyncForRange(request.rangePrevStart, request.rangePrevEnd);
+          await runSyncForRangeByDay(request.rangePrevStart, request.rangePrevEnd, 'Rango anterior');
         }
 
         status.textContent = 'Leyendo datos actualizados...';
