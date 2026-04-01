@@ -359,10 +359,6 @@
   <div class="summary">
     <div class="summary-grid">
       <div class="card">
-        <div class="card-title">Modo</div>
-        <div class="card-value" id="summaryMode">-</div>
-      </div>
-      <div class="card">
         <div class="card-title">Fecha / rango</div>
         <div class="card-value" id="summaryDate">-</div>
       </div>
@@ -815,6 +811,14 @@
       );
     }
 
+    function countUniqueStores(rows) {
+      const set = new Set();
+      rows.forEach(row => {
+        set.add(row.store_uuid || row.store_name || '');
+      });
+      return set.size;
+    }
+
     function getSummaryStats(rows) {
       const totalOrders = sum(rows.map(r => r.orders_total));
       const totalDeliveries = sum(rows.map(r => r.deliveries_total));
@@ -822,6 +826,7 @@
       const completionRate = totalOrders > 0 ? (totalDeliveries / totalOrders) * 100 : null;
 
       return {
+        uniqueStores: countUniqueStores(rows),
         totalOrders,
         totalDeliveries,
         notDelivered,
@@ -882,24 +887,19 @@
     function renderSummary(payload, requestMode, rows, hourLabel) {
       const stats = getSummaryStats(rows);
 
-      let modeText = '-';
       let dateText = '-';
 
       if (requestMode === 'today_live') {
-        modeText = 'Hoy';
         dateText = payload.business_date || todayChileIso();
       } else if (requestMode === 'single_day') {
-        modeText = 'Fecha específica';
         dateText = payload.business_date || '-';
       } else {
-        modeText = 'Rango';
         dateText = `${payload.requested_date_start || '-'} a ${payload.requested_date_end || '-'}`;
       }
 
-      document.getElementById('summaryMode').textContent = modeText;
       document.getElementById('summaryDate').textContent = dateText;
       document.getElementById('summaryHour').textContent = hourLabel;
-      document.getElementById('summaryStores').textContent = rows.length;
+      document.getElementById('summaryStores').textContent = stats.uniqueStores;
       document.getElementById('summaryOrders').textContent = stats.totalOrders;
       document.getElementById('summaryDeliveries').textContent = stats.totalDeliveries;
       document.getElementById('summaryNotDelivered').textContent = stats.notDelivered;
@@ -962,7 +962,19 @@
       }
     }
 
-    function buildRangeDailySeries(rows) {
+    function getDateRange(start, end) {
+      const dates = [];
+      let current = start;
+
+      while (current <= end) {
+        dates.push(current);
+        current = shiftDate(current, 1);
+      }
+
+      return dates;
+    }
+
+    function buildRangeDailySeriesMap(rows) {
       const grouped = new Map();
 
       rows.forEach(row => {
@@ -984,21 +996,37 @@
         if (row.e2e_minutes !== null && row.e2e_minutes !== undefined) item.e2e_values.push(Number(row.e2e_minutes));
       });
 
-      return Array.from(grouped.values())
-        .map(item => ({
-          business_date: item.business_date,
+      const result = new Map();
+
+      Array.from(grouped.values()).forEach(item => {
+        result.set(item.business_date, {
           orders_total: item.orders_total,
           on_time_pct: avg(item.on_time_values),
           e2e_minutes: avg(item.e2e_values),
-        }))
-        .sort((a, b) => String(a.business_date).localeCompare(String(b.business_date)));
+        });
+      });
+
+      return result;
+    }
+
+    function formatShortDayLabel(dateStr) {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day));
+
+      const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+      const dayName = dayNames[date.getUTCDay()];
+
+      return `${dayName} ${String(day).padStart(2, '0')}`;
     }
 
     function buildAlignedRangeSeries(currentRows, previousRows) {
-      const currentSeries = buildRangeDailySeries(currentRows);
-      const previousSeries = buildRangeDailySeries(previousRows);
+      const currentMap = buildRangeDailySeriesMap(currentRows);
+      const previousMap = buildRangeDailySeriesMap(previousRows);
 
-      const maxLen = Math.max(currentSeries.length, previousSeries.length);
+      const currentDates = getDateRange(lastRangeCurrentStart, lastRangeCurrentEnd);
+      const previousDates = getDateRange(lastRangePrevStart, lastRangePrevEnd);
+
+      const maxLen = Math.max(currentDates.length, previousDates.length);
       const labels = [];
       const currentOrders = [];
       const previousOrders = [];
@@ -1008,12 +1036,15 @@
       const previousE2E = [];
 
       for (let i = 0; i < maxLen; i++) {
-        const currentItem = currentSeries[i] || null;
-        const previousItem = previousSeries[i] || null;
+        const currentDate = currentDates[i] || null;
+        const previousDate = previousDates[i] || null;
 
-        labels.push(currentItem?.business_date || `Posición ${i + 1}`);
-        currentOrders.push(currentItem?.orders_total ?? null);
-        previousOrders.push(previousItem?.orders_total ?? null);
+        const currentItem = currentDate ? currentMap.get(currentDate) : null;
+        const previousItem = previousDate ? previousMap.get(previousDate) : null;
+
+        labels.push(currentDate ? formatShortDayLabel(currentDate) : `Día ${i + 1}`);
+        currentOrders.push(currentItem?.orders_total ?? 0);
+        previousOrders.push(previousItem?.orders_total ?? 0);
         currentOnTime.push(currentItem?.on_time_pct ?? null);
         previousOnTime.push(previousItem?.on_time_pct ?? null);
         currentE2E.push(currentItem?.e2e_minutes ?? null);
@@ -1235,7 +1266,9 @@
         syncDate,
         compareDate,
         rangePrevStart,
-        rangePrevEnd
+        rangePrevEnd,
+        dateStart,
+        dateEnd
       };
     }
 
@@ -1254,6 +1287,26 @@
 
       if (!res.ok || !payload.ok) {
         throw new Error(payload?.step || payload?.error || 'Error ejecutando sync');
+      }
+
+      return payload;
+    }
+
+    async function runSyncForRange(dateStart, dateEnd) {
+      const syncUrl = new URL(API_URL_SYNC);
+      syncUrl.searchParams.set('date_start', dateStart);
+      syncUrl.searchParams.set('date_end', dateEnd);
+      syncUrl.searchParams.set('_ts', Date.now().toString());
+
+      const res = await fetch(syncUrl.toString(), {
+        method: 'GET',
+        cache: 'no-store'
+      });
+
+      const payload = await res.json();
+
+      if (!res.ok || !payload.ok) {
+        throw new Error(payload?.step || payload?.error || 'Error ejecutando sync del rango');
       }
 
       return payload;
@@ -1375,6 +1428,16 @@
         if (request.compareDate) {
           status.textContent = `Sincronizando comparación ${request.compareDate}...`;
           await runSyncForDate(request.compareDate);
+        }
+
+        if (request.mode === 'range' && request.dateStart && request.dateEnd) {
+          status.textContent = `Sincronizando rango ${request.dateStart} a ${request.dateEnd}...`;
+          await runSyncForRange(request.dateStart, request.dateEnd);
+        }
+
+        if (request.mode === 'range' && request.rangePrevStart && request.rangePrevEnd) {
+          status.textContent = `Sincronizando rango anterior ${request.rangePrevStart} a ${request.rangePrevEnd}...`;
+          await runSyncForRange(request.rangePrevStart, request.rangePrevEnd);
         }
 
         status.textContent = 'Leyendo datos actualizados...';
