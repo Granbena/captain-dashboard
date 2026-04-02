@@ -1293,23 +1293,34 @@
       return payload;
     }
 
-    async function runAutoFill() {
-      const autoFillUrl = new URL(API_URL_AUTOFILL);
-      autoFillUrl.searchParams.set('days', '60');
-      autoFillUrl.searchParams.set('_ts', Date.now().toString());
+    async function runAutoFillSafe() {
+      try {
+        const autoFillUrl = new URL(API_URL_AUTOFILL);
+        autoFillUrl.searchParams.set('days', '60');
+        autoFillUrl.searchParams.set('max_sync_days', '7');
+        autoFillUrl.searchParams.set('_ts', Date.now().toString());
 
-      const res = await fetch(autoFillUrl.toString(), {
-        method: 'GET',
-        cache: 'no-store'
-      });
+        const res = await fetch(autoFillUrl.toString(), {
+          method: 'GET',
+          cache: 'no-store'
+        });
 
-      const payload = await res.json();
+        const payload = await res.json();
 
-      if (!res.ok || !payload.ok) {
-        throw new Error(payload?.step || payload?.error || 'Error ejecutando autofill');
+        if (!res.ok) {
+          console.error('Autofill HTTP error:', payload);
+          return null;
+        }
+
+        if (payload.failed_days?.length) {
+          console.warn('Autofill con días fallidos:', payload.failed_days);
+        }
+
+        return payload;
+      } catch (error) {
+        console.error('Autofill error:', error);
+        return null;
       }
-
-      return payload;
     }
 
     async function fetchLiveByDate(date, hourBand, hourStartText, hourEndText) {
@@ -1414,7 +1425,7 @@
       status.classList.remove('error');
 
       try {
-        await runAutoFill();
+        await runAutoFillSafe();
 
         const request = buildRequest();
 
