@@ -553,6 +553,10 @@
       return formatter.format(now);
     }
 
+    function isTodayChile(dateStr) {
+      return dateStr === todayChileIso();
+    }
+
     function getSameDayLastWeek(dateStr) {
       const [year, month, day] = dateStr.split('-').map(Number);
       const date = new Date(Date.UTC(year, month - 1, day));
@@ -1290,16 +1294,6 @@
       return payload;
     }
 
-    async function runSyncForRangeByDay(dateStart, dateEnd, label) {
-      const dates = getDateRange(dateStart, dateEnd);
-
-      for (let i = 0; i < dates.length; i++) {
-        const currentDate = dates[i];
-        document.getElementById('status').textContent = `${label}: sincronizando ${currentDate} (${i + 1}/${dates.length})...`;
-        await runSyncForDate(currentDate);
-      }
-    }
-
     async function fetchLiveByDate(date, hourBand, hourStartText, hourEndText) {
       const url = new URL(API_URL_LIVE);
       url.searchParams.set('business_date', date);
@@ -1342,7 +1336,7 @@
       const payload = await res.json();
 
       if (!res.ok || !payload.ok) {
-        throw new Error(payload?.step || payload?.error || 'Error leyendo rango comparación');
+        throw new Error(payload?.step || payload?.error || 'Error leyendo rango');
       }
 
       return payload;
@@ -1408,22 +1402,14 @@
         const hourStartText = document.getElementById('hour_start').value;
         const hourEndText = document.getElementById('hour_end').value;
 
-        if (request.syncDate) {
+        if (request.mode === 'today_live' && request.syncDate && isTodayChile(request.syncDate)) {
           status.textContent = `Sincronizando ${request.syncDate} con Captain...`;
           await runSyncForDate(request.syncDate);
         }
 
-        if (request.compareDate) {
-          status.textContent = `Sincronizando comparación ${request.compareDate}...`;
-          await runSyncForDate(request.compareDate);
-        }
-
-        if (request.mode === 'range' && request.dateStart && request.dateEnd) {
-          await runSyncForRangeByDay(request.dateStart, request.dateEnd, 'Rango actual');
-        }
-
-        if (request.mode === 'range' && request.rangePrevStart && request.rangePrevEnd) {
-          await runSyncForRangeByDay(request.rangePrevStart, request.rangePrevEnd, 'Rango anterior');
+        if (request.mode === 'single_day' && request.syncDate && isTodayChile(request.syncDate)) {
+          status.textContent = `Sincronizando ${request.syncDate} con Captain...`;
+          await runSyncForDate(request.syncDate);
         }
 
         status.textContent = 'Leyendo datos actualizados...';
