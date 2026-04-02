@@ -7,7 +7,10 @@ export default async function handler(req, res) {
     if (!supabaseAutofillUrl || !supabaseServiceRoleKey || !cronSecret) {
       return res.status(500).json({
         ok: false,
-        error: "Missing environment variables"
+        error: "Missing environment variables",
+        hasUrl: !!supabaseAutofillUrl,
+        hasServiceRole: !!supabaseServiceRoleKey,
+        hasCronSecret: !!cronSecret
       });
     }
 
@@ -25,11 +28,24 @@ export default async function handler(req, res) {
       }
     });
 
-    const data = await response.json();
+    const rawText = await response.text();
+
+    let data = null;
+    try {
+      data = rawText ? JSON.parse(rawText) : null;
+    } catch (parseError) {
+      return res.status(500).json({
+        ok: false,
+        error: "Supabase response is not valid JSON",
+        status: response.status,
+        rawText
+      });
+    }
 
     return res.status(response.ok ? 200 : 500).json({
       ok: response.ok,
       source: "vercel-cron",
+      status: response.status,
       data
     });
   } catch (error) {
