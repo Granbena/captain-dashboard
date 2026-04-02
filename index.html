@@ -520,7 +520,6 @@
     const API_URL_DAILY = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read';
     const API_URL_LIVE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read-live';
     const API_URL_SYNC = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-sync';
-    const API_URL_AUTOFILL = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-autofill';
 
     let currentMode = 'today_live';
     let currentRows = [];
@@ -698,9 +697,9 @@
           store_name: row.store_name,
           orders_total: row.orders_total ?? 0,
           deliveries_total: row.deliveries_total ?? row.orders_total ?? 0,
-          pick_minutes: row.collection_minutes ?? null,
-          delivery_minutes: row.trip_minutes ?? null,
-          e2e_minutes: row.delivery_minutes ?? null,
+          pick_minutes: row.collection_minutes ?? row.pick_minutes ?? null,
+          delivery_minutes: row.trip_minutes ?? row.delivery_minutes ?? null,
+          e2e_minutes: row.delivery_minutes ?? row.e2e_minutes ?? null,
           promise_minutes: row.promise_minutes ?? null,
           on_time_pct: row.on_time_pct ?? null
         }));
@@ -712,8 +711,8 @@
         store_name: row.store_name,
         orders_total: row.orders_total ?? 0,
         deliveries_total: row.deliveries_total ?? 0,
-        pick_minutes: row.pick_minutes ?? null,
-        delivery_minutes: row.delivery_minutes ?? null,
+        pick_minutes: row.pick_minutes ?? row.collection_minutes ?? null,
+        delivery_minutes: row.delivery_minutes ?? row.trip_minutes ?? null,
         e2e_minutes: row.e2e_minutes ?? null,
         promise_minutes: row.promise_minutes ?? null,
         on_time_pct: row.on_time_pct ?? null
@@ -897,7 +896,7 @@
       if (requestMode === 'today_live') {
         dateText = payload.business_date || todayChileIso();
       } else if (requestMode === 'single_day') {
-        dateText = payload.business_date || '-';
+        dateText = payload.business_date || payload.requested_business_date || '-';
       } else {
         dateText = `${payload.requested_date_start || '-'} a ${payload.requested_date_end || '-'}`;
       }
@@ -1195,6 +1194,17 @@
       });
     }
 
+    function addTimeParams(url, hourBand, hourStartText, hourEndText) {
+      if (hourBand === 'manual' && hourStartText && hourEndText) {
+        url.searchParams.set('time_start', hourStartText);
+        url.searchParams.set('time_end', hourEndText);
+      } else if (hourBand !== 'all_day' && hourBand !== 'manual') {
+        const config = getBandRange(hourBand);
+        url.searchParams.set('time_start', config.start);
+        url.searchParams.set('time_end', config.end);
+      }
+    }
+
     function buildRequest() {
       const businessDate = document.getElementById('business_date').value;
       const dateStart = document.getElementById('date_start').value;
@@ -1206,6 +1216,7 @@
       let url;
       let hourLabel = '-';
       let syncDate = null;
+      let currentDate = null;
       let compareDate = null;
       let rangePrevStart = null;
       let rangePrevEnd = null;
@@ -1213,39 +1224,31 @@
       if (currentMode === 'today_live') {
         const today = todayChileIso();
         syncDate = today;
+        currentDate = today;
         compareDate = getSameDayLastWeek(today);
 
         url = new URL(API_URL_LIVE);
         url.searchParams.set('business_date', today);
-
-        if (hourBand === 'manual' && hourStartText && hourEndText) {
-          url.searchParams.set('time_start', hourStartText);
-          url.searchParams.set('time_end', hourEndText);
-        } else if (hourBand !== 'all_day' && hourBand !== 'manual') {
-          const config = getBandRange(hourBand);
-          url.searchParams.set('time_start', config.start);
-          url.searchParams.set('time_end', config.end);
-        }
+        addTimeParams(url, hourBand, hourStartText, hourEndText);
 
         hourLabel = getHourLabel(hourBand, hourStartText, hourEndText);
       } else if (currentMode === 'single_day') {
-        url = new URL(API_URL_LIVE);
-
-        if (businessDate) {
-          syncDate = businessDate;
-          compareDate = getSameDayLastWeek(businessDate);
+        if (businessDate && isTodayChile(businessDate)) {
+          url = new URL(API_URL_LIVE);
           url.searchParams.set('business_date', businessDate);
+          addTimeParams(url, hourBand, hourStartText, hourEndText);
+          syncDate = businessDate;
+        } else {
+          url = new URL(API_URL_DAILY);
+          if (businessDate) {
+            url.searchParams.set('date_start', businessDate);
+            url.searchParams.set('date_end', businessDate);
+          }
+          addTimeParams(url, hourBand, hourStartText, hourEndText);
         }
 
-        if (hourBand === 'manual' && hourStartText && hourEndText) {
-          url.searchParams.set('time_start', hourStartText);
-          url.searchParams.set('time_end', hourEndText);
-        } else if (hourBand !== 'all_day' && hourBand !== 'manual') {
-          const config = getBandRange(hourBand);
-          url.searchParams.set('time_start', config.start);
-          url.searchParams.set('time_end', config.end);
-        }
-
+        currentDate = businessDate || null;
+        compareDate = businessDate ? getSameDayLastWeek(businessDate) : null;
         hourLabel = getHourLabel(hourBand, hourStartText, hourEndText);
       } else {
         url = new URL(API_URL_DAILY);
@@ -1267,6 +1270,7 @@
         url: url.toString(),
         hourLabel,
         syncDate,
+        currentDate,
         compareDate,
         rangePrevStart,
         rangePrevEnd
@@ -1293,49 +1297,19 @@
       return payload;
     }
 
-    async function runAutoFillSafe() {
-      try {
-        const autoFillUrl = new URL(API_URL_AUTOFILL);
-        autoFillUrl.searchParams.set('days', '60');
-        autoFillUrl.searchParams.set('max_sync_days', '7');
-        autoFillUrl.searchParams.set('_ts', Date.now().toString());
+    async function fetchSingleDayByDate(date, hourBand, hourStartText, hourEndText) {
+      const apiBase = isTodayChile(date) ? API_URL_LIVE : API_URL_DAILY;
+      const url = new URL(apiBase);
 
-        const res = await fetch(autoFillUrl.toString(), {
-          method: 'GET',
-          cache: 'no-store'
-        });
-
-        const payload = await res.json();
-
-        if (!res.ok) {
-          console.error('Autofill HTTP error:', payload);
-          return null;
-        }
-
-        if (payload.failed_days?.length) {
-          console.warn('Autofill con días fallidos:', payload.failed_days);
-        }
-
-        return payload;
-      } catch (error) {
-        console.error('Autofill error:', error);
-        return null;
+      if (isTodayChile(date)) {
+        url.searchParams.set('business_date', date);
+      } else {
+        url.searchParams.set('date_start', date);
+        url.searchParams.set('date_end', date);
       }
-    }
 
-    async function fetchLiveByDate(date, hourBand, hourStartText, hourEndText) {
-      const url = new URL(API_URL_LIVE);
-      url.searchParams.set('business_date', date);
+      addTimeParams(url, hourBand, hourStartText, hourEndText);
       url.searchParams.set('_ts', Date.now().toString());
-
-      if (hourBand === 'manual' && hourStartText && hourEndText) {
-        url.searchParams.set('time_start', hourStartText);
-        url.searchParams.set('time_end', hourEndText);
-      } else if (hourBand !== 'all_day' && hourBand !== 'manual') {
-        const config = getBandRange(hourBand);
-        url.searchParams.set('time_start', config.start);
-        url.searchParams.set('time_end', config.end);
-      }
 
       const res = await fetch(url.toString(), {
         method: 'GET',
@@ -1421,12 +1395,10 @@
 
     async function loadDashboard() {
       const status = document.getElementById('status');
-      status.textContent = 'Verificando histórico faltante...';
+      status.textContent = 'Cargando dashboard...';
       status.classList.remove('error');
 
       try {
-        await runAutoFillSafe();
-
         const request = buildRequest();
 
         const hourBand = document.getElementById('hour_band').value;
@@ -1443,7 +1415,7 @@
           await runSyncForDate(request.syncDate);
         }
 
-        status.textContent = 'Leyendo datos actualizados...';
+        status.textContent = 'Leyendo datos...';
 
         const res = await fetch(request.url, {
           method: 'GET',
@@ -1465,19 +1437,19 @@
         lastPayload = payload;
         lastHourLabel = request.hourLabel;
         lastRequestMode = request.mode;
-        lastCurrentDate = request.syncDate;
+        lastCurrentDate = request.currentDate;
 
         if (request.compareDate && request.mode !== 'range') {
           status.textContent = 'Leyendo comparación de semana pasada...';
 
-          const comparePayload = await fetchLiveByDate(
+          const comparePayload = await fetchSingleDayByDate(
             request.compareDate,
             hourBand,
             hourStartText,
             hourEndText
           );
 
-          lastCompareRows = normalizeRows(comparePayload, request.mode);
+          lastCompareRows = normalizeRows(comparePayload, 'single_day');
           lastCompareDate = request.compareDate;
           lastRangePrevRows = [];
           lastRangeCurrentStart = null;
