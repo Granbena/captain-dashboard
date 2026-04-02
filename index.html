@@ -16,7 +16,7 @@
       margin-bottom: 16px;
     }
 
-    .filters, .summary, .table-wrap, .charts-wrap {
+    .filters, .summary, .table-wrap, .charts-wrap, .compare-wrap {
       background: white;
       padding: 16px;
       border-radius: 12px;
@@ -97,6 +97,12 @@
       gap: 10px;
     }
 
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
     .card {
       background: #fafafa;
       border: 1px solid #ececec;
@@ -119,9 +125,10 @@
     }
 
     .card-subtle {
-      margin-top: 4px;
+      margin-top: 6px;
       font-size: 11px;
       color: #777;
+      line-height: 1.35;
     }
 
     .compare-positive {
@@ -139,7 +146,7 @@
       font-weight: 700;
     }
 
-    .charts-header, .table-header {
+    .charts-header, .table-header, .compare-header {
       display: flex;
       justify-content: space-between;
       align-items: end;
@@ -148,12 +155,12 @@
       flex-wrap: wrap;
     }
 
-    .charts-title, .table-title {
+    .charts-title, .table-title, .compare-title {
       font-weight: 700;
       font-size: 18px;
     }
 
-    .charts-subtle, .table-subtle {
+    .charts-subtle, .table-subtle, .compare-subtle {
       color: #666;
       font-size: 13px;
     }
@@ -194,7 +201,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1200px;
+      min-width: 1050px;
     }
 
     th, td {
@@ -406,29 +413,40 @@
         <div class="card-title">Promesa Prom.</div>
         <div class="card-value" id="summaryPromise">-</div>
       </div>
+    </div>
+  </div>
 
+  <div class="compare-wrap" id="compareSection">
+    <div class="compare-header">
+      <div>
+        <div class="compare-title">Comparativo vs semana pasada</div>
+        <div class="compare-subtle">Resumen rápido del día actual contra el mismo día de la semana anterior</div>
+      </div>
+    </div>
+
+    <div class="compare-grid">
       <div class="card compare-card">
         <div class="card-title">Órdenes vs semana pasada</div>
         <div class="card-value" id="summaryOrdersVs">-</div>
-        <div class="card-subtle" id="summaryOrdersVsLabel">Comparación mismo día semana pasada</div>
+        <div class="card-subtle" id="summaryOrdersVsLabel">-</div>
       </div>
 
       <div class="card compare-card">
         <div class="card-title">OnTime vs semana pasada</div>
         <div class="card-value" id="summaryOnTimeVs">-</div>
-        <div class="card-subtle" id="summaryOnTimeVsLabel">Comparación mismo día semana pasada</div>
+        <div class="card-subtle" id="summaryOnTimeVsLabel">-</div>
       </div>
 
       <div class="card compare-card">
         <div class="card-title">E2E vs semana pasada</div>
         <div class="card-value" id="summaryE2EVs">-</div>
-        <div class="card-subtle" id="summaryE2EVsLabel">Comparación mismo día semana pasada</div>
+        <div class="card-subtle" id="summaryE2EVsLabel">-</div>
       </div>
 
       <div class="card compare-card">
         <div class="card-title">Pick vs semana pasada</div>
         <div class="card-value" id="summaryPickVs">-</div>
-        <div class="card-subtle" id="summaryPickVsLabel">Comparación mismo día semana pasada</div>
+        <div class="card-subtle" id="summaryPickVsLabel">-</div>
       </div>
     </div>
   </div>
@@ -482,9 +500,6 @@
     <table>
       <thead>
         <tr>
-          <th class="sortable" data-sort-key="business_date">
-            <span class="sort-label">Business Date <span class="sort-arrow" data-arrow-for="business_date"></span></span>
-          </th>
           <th class="sortable" data-sort-key="store_name">
             <span class="sort-label">Tienda <span class="sort-arrow" data-arrow-for="store_name"></span></span>
           </th>
@@ -576,6 +591,20 @@
       const num = Number(value);
       if (Number.isNaN(num)) return '-';
       return num.toFixed(decimals);
+    }
+
+    function formatNumberCompact(value, decimals = 1) {
+      if (value === null || value === undefined || value === '') return '-';
+      const num = Number(value);
+      if (Number.isNaN(num)) return '-';
+      return num.toFixed(decimals);
+    }
+
+    function formatInteger(value) {
+      if (value === null || value === undefined || value === '') return '-';
+      const num = Number(value);
+      if (Number.isNaN(num)) return '-';
+      return Math.round(num).toString();
     }
 
     function formatPercent(value, decimals = 1) {
@@ -690,33 +719,39 @@
     function normalizeRows(payload, requestMode) {
       const rows = payload.data || [];
 
-      if (requestMode === 'range') {
-        return rows.map(row => ({
+      return rows.map(row => {
+        const isHistoricalShape =
+          row.collection_minutes !== undefined ||
+          row.trip_minutes !== undefined;
+
+        if (isHistoricalShape) {
+          return {
+            business_date: row.business_date,
+            store_uuid: row.store_uuid,
+            store_name: row.store_name,
+            orders_total: row.orders_total ?? 0,
+            deliveries_total: row.deliveries_total ?? row.orders_total ?? 0,
+            pick_minutes: row.collection_minutes ?? null,
+            delivery_minutes: row.trip_minutes ?? null,
+            e2e_minutes: row.delivery_minutes ?? null,
+            promise_minutes: row.promise_minutes ?? null,
+            on_time_pct: row.on_time_pct ?? null
+          };
+        }
+
+        return {
           business_date: row.business_date,
           store_uuid: row.store_uuid,
           store_name: row.store_name,
           orders_total: row.orders_total ?? 0,
-          deliveries_total: row.deliveries_total ?? row.orders_total ?? 0,
-          pick_minutes: row.collection_minutes ?? row.pick_minutes ?? null,
-          delivery_minutes: row.trip_minutes ?? row.delivery_minutes ?? null,
-          e2e_minutes: row.delivery_minutes ?? row.e2e_minutes ?? null,
+          deliveries_total: row.deliveries_total ?? 0,
+          pick_minutes: row.pick_minutes ?? null,
+          delivery_minutes: row.delivery_minutes ?? null,
+          e2e_minutes: row.e2e_minutes ?? null,
           promise_minutes: row.promise_minutes ?? null,
           on_time_pct: row.on_time_pct ?? null
-        }));
-      }
-
-      return rows.map(row => ({
-        business_date: row.business_date,
-        store_uuid: row.store_uuid,
-        store_name: row.store_name,
-        orders_total: row.orders_total ?? 0,
-        deliveries_total: row.deliveries_total ?? 0,
-        pick_minutes: row.pick_minutes ?? row.collection_minutes ?? null,
-        delivery_minutes: row.delivery_minutes ?? row.trip_minutes ?? null,
-        e2e_minutes: row.e2e_minutes ?? null,
-        promise_minutes: row.promise_minutes ?? null,
-        on_time_pct: row.on_time_pct ?? null
-      }));
+        };
+      });
     }
 
     function compareValues(a, b, direction = 'asc') {
@@ -876,16 +911,14 @@
     }
 
     function clearCompareCards() {
-      setCompareCard('summaryOrdersVs', { text: '-', className: 'compare-neutral' }, 'summaryOrdersVsLabel', 'Comparación mismo día semana pasada');
-      setCompareCard('summaryOnTimeVs', { text: '-', className: 'compare-neutral' }, 'summaryOnTimeVsLabel', 'Comparación mismo día semana pasada');
-      setCompareCard('summaryE2EVs', { text: '-', className: 'compare-neutral' }, 'summaryE2EVsLabel', 'Comparación mismo día semana pasada');
-      setCompareCard('summaryPickVs', { text: '-', className: 'compare-neutral' }, 'summaryPickVsLabel', 'Comparación mismo día semana pasada');
+      setCompareCard('summaryOrdersVs', { text: '-', className: 'compare-neutral' }, 'summaryOrdersVsLabel', '-');
+      setCompareCard('summaryOnTimeVs', { text: '-', className: 'compare-neutral' }, 'summaryOnTimeVsLabel', '-');
+      setCompareCard('summaryE2EVs', { text: '-', className: 'compare-neutral' }, 'summaryE2EVsLabel', '-');
+      setCompareCard('summaryPickVs', { text: '-', className: 'compare-neutral' }, 'summaryPickVsLabel', '-');
     }
 
     function toggleCompareCards(show) {
-      document.querySelectorAll('.compare-card').forEach(el => {
-        el.classList.toggle('hidden', !show);
-      });
+      document.getElementById('compareSection').classList.toggle('hidden', !show);
     }
 
     function renderSummary(payload, requestMode, rows, hourLabel) {
@@ -915,7 +948,7 @@
       document.getElementById('summaryPromise').textContent = stats.promiseAvg !== null ? formatNumber(stats.promiseAvg) : '-';
     }
 
-    function renderComparison(currentRowsInput, previousRowsInput, currentDate, previousDate) {
+    function renderComparison(currentRowsInput, previousRowsInput) {
       const currentRowsFiltered = filterRowsByStore(currentRowsInput);
       const previousRowsFiltered = filterRowsByStore(previousRowsInput);
 
@@ -926,28 +959,28 @@
         'summaryOrdersVs',
         formatDiffPercent(currentStats.totalOrders, previousStats.totalOrders, false),
         'summaryOrdersVsLabel',
-        `${currentDate} vs ${previousDate}`
+        `${formatInteger(currentStats.totalOrders)} vs ${formatInteger(previousStats.totalOrders)}`
       );
 
       setCompareCard(
         'summaryOnTimeVs',
         formatDiffPercent(currentStats.onTimeAvg, previousStats.onTimeAvg, false),
         'summaryOnTimeVsLabel',
-        `${currentDate} vs ${previousDate}`
+        `${formatPercent(currentStats.onTimeAvg)} vs ${formatPercent(previousStats.onTimeAvg)}`
       );
 
       setCompareCard(
         'summaryE2EVs',
         formatDiffPercent(currentStats.e2eAvg, previousStats.e2eAvg, true),
         'summaryE2EVsLabel',
-        `${currentDate} vs ${previousDate}`
+        `${formatNumberCompact(currentStats.e2eAvg)} vs ${formatNumberCompact(previousStats.e2eAvg)}`
       );
 
       setCompareCard(
         'summaryPickVs',
         formatDiffPercent(currentStats.pickAvg, previousStats.pickAvg, true),
         'summaryPickVsLabel',
-        `${currentDate} vs ${previousDate}`
+        `${formatNumberCompact(currentStats.pickAvg)} vs ${formatNumberCompact(previousStats.pickAvg)}`
       );
     }
 
@@ -1158,7 +1191,7 @@
       if (!rows.length) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="9">Sin datos para el filtro seleccionado.</td>
+            <td colspan="8">Sin datos para el filtro seleccionado.</td>
           </tr>
         `;
         return;
@@ -1173,7 +1206,6 @@
         const e2eClass = getE2EClass(row.e2e_minutes);
 
         tr.innerHTML = `
-          <td>${row.business_date || '-'}</td>
           <td>${row.store_name || '-'}</td>
           <td class="align-right">${row.orders_total ?? 0}</td>
           <td class="align-right">${row.deliveries_total ?? 0}</td>
@@ -1376,7 +1408,7 @@
       updateSortArrows();
 
       if (lastCurrentDate && lastCompareDate && lastCompareRows.length) {
-        renderComparison(lastBaseRows, lastCompareRows, lastCurrentDate, lastCompareDate);
+        renderComparison(lastBaseRows, lastCompareRows);
       } else {
         clearCompareCards();
       }
@@ -1501,7 +1533,7 @@
           currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
         } else {
           currentSort.key = key;
-          currentSort.direction = ['store_name', 'business_date'].includes(key) ? 'asc' : 'desc';
+          currentSort.direction = ['store_name'].includes(key) ? 'asc' : 'desc';
         }
 
         const sortedRows = sortRows(currentRows);
