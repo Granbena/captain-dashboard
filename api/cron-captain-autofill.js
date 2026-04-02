@@ -1,19 +1,10 @@
 export default async function handler(req, res) {
   try {
-    const cronSecret = process.env.CRON_SECRET;
-    const providedSecret = req.headers["x-cron-secret"];
-
-    if (!cronSecret || providedSecret !== cronSecret) {
-      return res.status(401).json({
-        ok: false,
-        error: "Unauthorized"
-      });
-    }
-
     const supabaseAutofillUrl = process.env.SUPABASE_AUTOFILL_URL;
     const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const cronSecret = process.env.CRON_SECRET;
 
-    if (!supabaseAutofillUrl || !supabaseServiceRoleKey) {
+    if (!supabaseAutofillUrl || !supabaseServiceRoleKey || !cronSecret) {
       return res.status(500).json({
         ok: false,
         error: "Missing environment variables"
