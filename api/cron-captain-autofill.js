@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
     const url = new URL(supabaseAutofillUrl);
     url.searchParams.set("days", "60");
-    url.searchParams.set("max_sync_days", "60");
+    url.searchParams.set("max_sync_days", "5");
     url.searchParams.set("_ts", Date.now().toString());
 
     const response = await fetch(url.toString(), {
