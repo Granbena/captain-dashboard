@@ -520,6 +520,7 @@
     const API_URL_DAILY = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read';
     const API_URL_LIVE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read-live';
     const API_URL_SYNC = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-sync';
+    const API_URL_AUTOFILL = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-autofill';
 
     let currentMode = 'today_live';
     let currentRows = [];
@@ -1268,9 +1269,7 @@
         syncDate,
         compareDate,
         rangePrevStart,
-        rangePrevEnd,
-        dateStart,
-        dateEnd
+        rangePrevEnd
       };
     }
 
@@ -1289,6 +1288,25 @@
 
       if (!res.ok || !payload.ok) {
         throw new Error(payload?.step || payload?.error || 'Error ejecutando sync');
+      }
+
+      return payload;
+    }
+
+    async function runAutoFill() {
+      const autoFillUrl = new URL(API_URL_AUTOFILL);
+      autoFillUrl.searchParams.set('days', '60');
+      autoFillUrl.searchParams.set('_ts', Date.now().toString());
+
+      const res = await fetch(autoFillUrl.toString(), {
+        method: 'GET',
+        cache: 'no-store'
+      });
+
+      const payload = await res.json();
+
+      if (!res.ok || !payload.ok) {
+        throw new Error(payload?.step || payload?.error || 'Error ejecutando autofill');
       }
 
       return payload;
@@ -1392,10 +1410,12 @@
 
     async function loadDashboard() {
       const status = document.getElementById('status');
-      status.textContent = 'Cargando...';
+      status.textContent = 'Verificando histórico faltante...';
       status.classList.remove('error');
 
       try {
+        await runAutoFill();
+
         const request = buildRequest();
 
         const hourBand = document.getElementById('hour_band').value;
