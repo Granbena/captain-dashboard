@@ -16,7 +16,12 @@
       margin-bottom: 16px;
     }
 
-    .filters, .summary, .table-wrap, .charts-wrap, .compare-wrap {
+    .filters,
+    .summary,
+    .table-wrap,
+    .charts-wrap,
+    .compare-wrap,
+    .context-wrap {
       background: white;
       padding: 16px;
       border-radius: 12px;
@@ -91,9 +96,34 @@
       display: none !important;
     }
 
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .section-subtle {
+      color: #666;
+      font-size: 13px;
+    }
+
+    .context-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+
     .summary-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 10px;
     }
 
@@ -124,6 +154,12 @@
       word-break: break-word;
     }
 
+    .context-value {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
     .card-subtle {
       margin-top: 6px;
       font-size: 11px;
@@ -144,25 +180,6 @@
     .compare-neutral {
       color: #6b7280;
       font-weight: 700;
-    }
-
-    .charts-header, .table-header, .compare-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: end;
-      gap: 12px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
-    }
-
-    .charts-title, .table-title, .compare-title {
-      font-weight: 700;
-      font-size: 18px;
-    }
-
-    .charts-subtle, .table-subtle, .compare-subtle {
-      color: #666;
-      font-size: 13px;
     }
 
     .charts-stack {
@@ -201,7 +218,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1050px;
+      min-width: 980px;
     }
 
     th, td {
@@ -363,20 +380,37 @@
 
   <div class="status" id="status">Esperando carga...</div>
 
-  <div class="summary">
-    <div class="summary-grid">
+  <div class="context-wrap">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Contexto</div>
+        <div class="section-subtle">Referencia de lo que estás viendo en pantalla</div>
+      </div>
+    </div>
+    <div class="context-grid">
       <div class="card">
         <div class="card-title">Fecha / rango</div>
-        <div class="card-value" id="summaryDate">-</div>
+        <div class="context-value" id="summaryDate">-</div>
       </div>
       <div class="card">
         <div class="card-title">Horario</div>
-        <div class="card-value" id="summaryHour">-</div>
+        <div class="context-value" id="summaryHour">-</div>
       </div>
       <div class="card">
         <div class="card-title">Tiendas</div>
-        <div class="card-value" id="summaryStores">0</div>
+        <div class="context-value" id="summaryStores">0</div>
       </div>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Resumen operativo</div>
+        <div class="section-subtle">Volumen, cumplimiento y resultado operativo</div>
+      </div>
+    </div>
+    <div class="summary-grid">
       <div class="card">
         <div class="card-title">Órdenes</div>
         <div class="card-value" id="summaryOrders">0</div>
@@ -394,6 +428,21 @@
         <div class="card-value" id="summaryCompletion">-</div>
       </div>
       <div class="card">
+        <div class="card-title">OnTime Prom.</div>
+        <div class="card-value" id="summaryOnTime">-</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Tiempos promedio</div>
+        <div class="section-subtle">Velocidad de la operación y promesa promedio</div>
+      </div>
+    </div>
+    <div class="summary-grid">
+      <div class="card">
         <div class="card-title">Pick Prom.</div>
         <div class="card-value" id="summaryPick">-</div>
       </div>
@@ -406,10 +455,6 @@
         <div class="card-value" id="summaryE2E">-</div>
       </div>
       <div class="card">
-        <div class="card-title">OnTime Prom.</div>
-        <div class="card-value" id="summaryOnTime">-</div>
-      </div>
-      <div class="card">
         <div class="card-title">Promesa Prom.</div>
         <div class="card-value" id="summaryPromise">-</div>
       </div>
@@ -417,10 +462,10 @@
   </div>
 
   <div class="compare-wrap" id="compareSection">
-    <div class="compare-header">
+    <div class="section-header">
       <div>
-        <div class="compare-title">Comparativo vs semana pasada</div>
-        <div class="compare-subtle">Resumen rápido del día actual contra el mismo día de la semana anterior</div>
+        <div class="section-title">Comparativo vs semana pasada</div>
+        <div class="section-subtle">Resumen rápido del día actual contra el mismo día de la semana anterior</div>
       </div>
     </div>
 
@@ -452,10 +497,10 @@
   </div>
 
   <div class="charts-wrap hidden" id="rangeChartsSection">
-    <div class="charts-header">
+    <div class="section-header">
       <div>
-        <div class="charts-title">Tendencia del rango</div>
-        <div class="charts-subtle" id="rangeChartsSubtle">Comparación contra la semana anterior del rango seleccionado</div>
+        <div class="section-title">Tendencia del rango</div>
+        <div class="section-subtle" id="rangeChartsSubtle">Comparación contra la semana anterior del rango seleccionado</div>
       </div>
     </div>
 
@@ -484,10 +529,10 @@
   </div>
 
   <div class="table-wrap" id="tableSection">
-    <div class="table-header">
+    <div class="section-header">
       <div>
-        <div class="table-title" id="tableTitle">Detalle por tienda</div>
-        <div class="table-subtle" id="tableSubtle">Haz clic en cualquier KPI para ordenar</div>
+        <div class="section-title" id="tableTitle">Detalle por tienda</div>
+        <div class="section-subtle" id="tableSubtle">Haz clic en cualquier KPI para ordenar</div>
       </div>
     </div>
 
@@ -716,7 +761,7 @@
       return '-';
     }
 
-    function normalizeRows(payload, requestMode) {
+    function normalizeRows(payload) {
       const rows = payload.data || [];
 
       return rows.map(row => {
@@ -921,9 +966,7 @@
       document.getElementById('compareSection').classList.toggle('hidden', !show);
     }
 
-    function renderSummary(payload, requestMode, rows, hourLabel) {
-      const stats = getSummaryStats(rows);
-
+    function renderContext(payload, requestMode, rows, hourLabel) {
       let dateText = '-';
 
       if (requestMode === 'today_live') {
@@ -936,15 +979,25 @@
 
       document.getElementById('summaryDate').textContent = dateText;
       document.getElementById('summaryHour').textContent = hourLabel;
-      document.getElementById('summaryStores').textContent = stats.uniqueStores;
+      document.getElementById('summaryStores').textContent = countUniqueStores(rows);
+    }
+
+    function renderOperationalSummary(rows) {
+      const stats = getSummaryStats(rows);
+
       document.getElementById('summaryOrders').textContent = stats.totalOrders;
       document.getElementById('summaryDeliveries').textContent = stats.totalDeliveries;
       document.getElementById('summaryNotDelivered').textContent = stats.notDelivered;
       document.getElementById('summaryCompletion').textContent = stats.completionRate !== null ? formatPercent(stats.completionRate) : '-';
+      document.getElementById('summaryOnTime').textContent = stats.onTimeAvg !== null ? formatPercent(stats.onTimeAvg) : '-';
+    }
+
+    function renderTimingSummary(rows) {
+      const stats = getSummaryStats(rows);
+
       document.getElementById('summaryPick').textContent = stats.pickAvg !== null ? formatNumber(stats.pickAvg) : '-';
       document.getElementById('summaryDelivery').textContent = stats.deliveryAvg !== null ? formatNumber(stats.deliveryAvg) : '-';
       document.getElementById('summaryE2E').textContent = stats.e2eAvg !== null ? formatNumber(stats.e2eAvg) : '-';
-      document.getElementById('summaryOnTime').textContent = stats.onTimeAvg !== null ? formatPercent(stats.onTimeAvg) : '-';
       document.getElementById('summaryPromise').textContent = stats.promiseAvg !== null ? formatNumber(stats.promiseAvg) : '-';
     }
 
@@ -1385,7 +1438,9 @@
       if (lastRequestMode === 'range') {
         toggleCompareCards(false);
         tableSection.classList.add('hidden');
-        renderSummary(lastPayload, lastRequestMode, filterRowsByStore(lastBaseRows), lastHourLabel);
+        renderContext(lastPayload, lastRequestMode, filterRowsByStore(lastBaseRows), lastHourLabel);
+        renderOperationalSummary(filterRowsByStore(lastBaseRows));
+        renderTimingSummary(filterRowsByStore(lastBaseRows));
         renderRangeCharts(lastBaseRows, lastRangePrevRows);
         currentRows = [];
         hideTableStatus();
@@ -1403,7 +1458,9 @@
       document.getElementById('tableTitle').textContent = 'Detalle por tienda';
       document.getElementById('tableSubtle').textContent = 'Haz clic en cualquier KPI para ordenar';
 
-      renderSummary(lastPayload, lastRequestMode, sortedRows, lastHourLabel);
+      renderContext(lastPayload, lastRequestMode, sortedRows, lastHourLabel);
+      renderOperationalSummary(sortedRows);
+      renderTimingSummary(sortedRows);
       renderTable(sortedRows);
       updateSortArrows();
 
@@ -1463,7 +1520,7 @@
           return;
         }
 
-        const normalizedRows = normalizeRows(payload, request.mode);
+        const normalizedRows = normalizeRows(payload);
 
         lastBaseRows = normalizedRows;
         lastPayload = payload;
@@ -1481,7 +1538,7 @@
             hourEndText
           );
 
-          lastCompareRows = normalizeRows(comparePayload, 'single_day');
+          lastCompareRows = normalizeRows(comparePayload);
           lastCompareDate = request.compareDate;
           lastRangePrevRows = [];
           lastRangeCurrentStart = null;
@@ -1492,7 +1549,7 @@
           status.textContent = 'Leyendo comparación del rango anterior...';
 
           const rangePrevPayload = await fetchRangeByDates(request.rangePrevStart, request.rangePrevEnd);
-          lastRangePrevRows = normalizeRows(rangePrevPayload, request.mode);
+          lastRangePrevRows = normalizeRows(rangePrevPayload);
           lastCompareRows = [];
           lastCompareDate = null;
           lastRangeCurrentStart = payload.requested_date_start;
