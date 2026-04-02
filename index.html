@@ -5,28 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Captain KPI Dashboard</title>
   <style>
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --panel-soft: #fafafa;
+      --border: #e8e8e8;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --dark: #0f172a;
+      --green: #15803d;
+      --red: #b91c1c;
+      --yellow: #a16207;
+      --shadow: 0 1px 4px rgba(0,0,0,0.08);
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: Arial, sans-serif;
       margin: 24px;
-      background: #f7f7f9;
-      color: #222;
+      background: var(--bg);
+      color: var(--text);
     }
 
     h1 {
+      margin: 0 0 16px 0;
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+    .panel,
+    .table-wrap,
+    .charts-wrap {
+      background: var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
       margin-bottom: 16px;
     }
 
-    .filters,
-    .summary,
-    .table-wrap,
-    .charts-wrap,
-    .compare-wrap,
-    .context-wrap {
-      background: white;
+    .filters {
+      background: var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
       padding: 16px;
-      border-radius: 12px;
-      margin-bottom: 16px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      margin-bottom: 12px;
     }
 
     .mode-tabs {
@@ -96,90 +122,235 @@
       display: none !important;
     }
 
-    .section-header {
+    .status {
+      margin: 12px 0 14px 0;
+      color: #444;
+      font-size: 15px;
+    }
+
+    .error {
+      color: #b00020;
+      font-weight: bold;
+    }
+
+    .context-line {
       display: flex;
-      justify-content: space-between;
-      align-items: end;
-      gap: 12px;
-      margin-bottom: 10px;
       flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .context-pill {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-weight: 700;
+      color: #374151;
+    }
+
+    .hero-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .hero-left,
+    .hero-right {
+      background: var(--panel-soft);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
     }
 
     .section-title {
-      font-weight: 700;
       font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 4px;
     }
 
     .section-subtle {
-      color: #666;
       font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 14px;
     }
 
-    .context-grid {
+    .ops-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(2, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .kpi-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      min-height: 90px;
+    }
+
+    .kpi-title {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .kpi-value {
+      font-size: 34px;
+      line-height: 1;
+      font-weight: 800;
+      color: var(--dark);
+    }
+
+    .kpi-value-small {
+      font-size: 26px;
+      line-height: 1.05;
+      font-weight: 800;
+      color: var(--dark);
+    }
+
+    .times-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      grid-template-rows: auto auto;
       gap: 10px;
     }
 
-    .summary-grid {
+    .e2e-card {
+      grid-row: 1 / span 2;
+      background: white;
+      border: 2px solid #d1d5db;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 190px;
+    }
+
+    .mini-time-card {
+      background: white;
+      border: 2px solid #d1d5db;
+      border-radius: 12px;
+      padding: 14px;
+      min-height: 90px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .bottom-time-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      grid-template-columns: 1fr 1fr;
       gap: 10px;
+      margin-top: 10px;
+    }
+
+    .time-label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .time-label-e2e {
+      font-size: 18px;
+      color: #4b5563;
+      margin-bottom: 10px;
+    }
+
+    .time-value-xl {
+      font-size: 58px;
+      line-height: 1;
+      font-weight: 800;
+      color: #000;
+    }
+
+    .time-value-lg {
+      font-size: 32px;
+      line-height: 1;
+      font-weight: 800;
+      color: #000;
+    }
+
+    .compare-wrap {
+      background: var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      margin-bottom: 16px;
     }
 
     .compare-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 12px;
     }
 
-    .card {
-      background: #fafafa;
-      border: 1px solid #ececec;
-      border-radius: 10px;
-      padding: 12px;
+    .compare-card {
+      background: var(--panel-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
     }
 
-    .card-title {
+    .compare-title {
       font-size: 12px;
-      color: #666;
-      margin-bottom: 6px;
+      color: var(--muted);
       font-weight: 700;
+      margin-bottom: 8px;
     }
 
-    .card-value {
-      font-size: 16px;
-      font-weight: 700;
-      line-height: 1.25;
-      word-break: break-word;
+    .compare-value {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.05;
     }
 
-    .context-value {
-      font-size: 18px;
-      font-weight: 700;
-      line-height: 1.2;
-    }
-
-    .card-subtle {
-      margin-top: 6px;
-      font-size: 11px;
-      color: #777;
-      line-height: 1.35;
+    .compare-subtle {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.3;
     }
 
     .compare-positive {
-      color: #15803d;
-      font-weight: 700;
+      color: var(--green);
     }
 
     .compare-negative {
-      color: #b91c1c;
-      font-weight: 700;
+      color: var(--red);
     }
 
     .compare-neutral {
-      color: #6b7280;
-      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .charts-header,
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 12px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .charts-title,
+    .table-title {
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .charts-subtle,
+    .table-subtle {
+      color: var(--muted);
+      font-size: 13px;
     }
 
     .charts-stack {
@@ -215,10 +386,14 @@
       line-height: 1.5;
     }
 
+    .table-scroll {
+      overflow-x: auto;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 980px;
+      min-width: 900px;
     }
 
     th, td {
@@ -263,16 +438,6 @@
       background: #fafafa;
     }
 
-    .status {
-      margin: 12px 0;
-      color: #444;
-    }
-
-    .error {
-      color: #b00020;
-      font-weight: bold;
-    }
-
     .pill {
       display: inline-block;
       padding: 4px 8px;
@@ -315,6 +480,47 @@
 
     .align-right {
       text-align: right;
+    }
+
+    @media (max-width: 1080px) {
+      .hero-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .time-value-xl {
+        font-size: 48px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      body {
+        margin: 14px;
+      }
+
+      .ops-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .times-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .e2e-card {
+        grid-row: auto;
+        min-height: 150px;
+      }
+
+      .bottom-time-row {
+        grid-template-columns: 1fr;
+      }
+
+      .kpi-value {
+        font-size: 28px;
+      }
+
+      .time-value-xl {
+        font-size: 42px;
+      }
     }
   </style>
 </head>
@@ -380,127 +586,117 @@
 
   <div class="status" id="status">Esperando carga...</div>
 
-  <div class="context-wrap">
-    <div class="section-header">
-      <div>
-        <div class="section-title">Contexto</div>
-        <div class="section-subtle">Referencia de lo que estás viendo en pantalla</div>
-      </div>
+  <div class="panel">
+    <div class="context-line">
+      <span class="context-pill" id="summaryDate">-</span>
+      <span class="context-pill" id="summaryHour">-</span>
+      <span class="context-pill"><span id="summaryStores">0</span> tiendas</span>
     </div>
-    <div class="context-grid">
-      <div class="card">
-        <div class="card-title">Fecha / rango</div>
-        <div class="context-value" id="summaryDate">-</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Horario</div>
-        <div class="context-value" id="summaryHour">-</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Tiendas</div>
-        <div class="context-value" id="summaryStores">0</div>
-      </div>
-    </div>
-  </div>
 
-  <div class="summary">
-    <div class="section-header">
-      <div>
-        <div class="section-title">Resumen operativo</div>
-        <div class="section-subtle">Volumen, cumplimiento y resultado operativo</div>
-      </div>
-    </div>
-    <div class="summary-grid">
-      <div class="card">
-        <div class="card-title">Órdenes</div>
-        <div class="card-value" id="summaryOrders">0</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Entregas</div>
-        <div class="card-value" id="summaryDeliveries">0</div>
-      </div>
-      <div class="card">
-        <div class="card-title">No entregadas</div>
-        <div class="card-value" id="summaryNotDelivered">0</div>
-      </div>
-      <div class="card">
-        <div class="card-title">% completadas</div>
-        <div class="card-value" id="summaryCompletion">-</div>
-      </div>
-      <div class="card">
-        <div class="card-title">OnTime Prom.</div>
-        <div class="card-value" id="summaryOnTime">-</div>
-      </div>
-    </div>
-  </div>
+    <div class="hero-layout">
+      <div class="hero-left">
+        <div class="section-title">Operación</div>
+        <div class="section-subtle">Volumen y resultado del día</div>
 
-  <div class="summary">
-    <div class="section-header">
-      <div>
-        <div class="section-title">Tiempos promedio</div>
-        <div class="section-subtle">Velocidad de la operación y promesa promedio</div>
+        <div class="ops-grid">
+          <div class="kpi-card">
+            <div class="kpi-title">Órdenes</div>
+            <div class="kpi-value" id="summaryOrders">0</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">Entregas</div>
+            <div class="kpi-value" id="summaryDeliveries">0</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">No entregadas</div>
+            <div class="kpi-value-small" id="summaryNotDelivered">0</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">% completadas</div>
+            <div class="kpi-value-small" id="summaryCompletion">-</div>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="summary-grid">
-      <div class="card">
-        <div class="card-title">Pick Prom.</div>
-        <div class="card-value" id="summaryPick">-</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Delivery Prom.</div>
-        <div class="card-value" id="summaryDelivery">-</div>
-      </div>
-      <div class="card">
-        <div class="card-title">E2E Prom.</div>
-        <div class="card-value" id="summaryE2E">-</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Promesa Prom.</div>
-        <div class="card-value" id="summaryPromise">-</div>
+
+      <div class="hero-right">
+        <div class="section-title">Tiempos clave</div>
+        <div class="section-subtle">Lectura rápida de performance</div>
+
+        <div class="times-grid">
+          <div class="e2e-card">
+            <div class="time-label-e2e">E2E</div>
+            <div class="time-value-xl" id="summaryE2E">-</div>
+          </div>
+
+          <div class="mini-time-card">
+            <div class="time-label">Tiempo hasta recolección</div>
+            <div class="time-value-lg" id="summaryPick">-</div>
+          </div>
+
+          <div class="mini-time-card">
+            <div class="time-label">Delivery time</div>
+            <div class="time-value-lg" id="summaryDelivery">-</div>
+          </div>
+        </div>
+
+        <div class="bottom-time-row">
+          <div class="mini-time-card">
+            <div class="time-label">Promesa</div>
+            <div class="time-value-lg" id="summaryPromise">-</div>
+          </div>
+
+          <div class="mini-time-card">
+            <div class="time-label">On Time %</div>
+            <div class="time-value-lg" id="summaryOnTime">-</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="compare-wrap" id="compareSection">
-    <div class="section-header">
+    <div class="charts-header">
       <div>
-        <div class="section-title">Comparativo vs semana pasada</div>
-        <div class="section-subtle">Resumen rápido del día actual contra el mismo día de la semana anterior</div>
+        <div class="charts-title">Comparativo vs semana pasada</div>
+        <div class="charts-subtle">Lectura secundaria para contexto</div>
       </div>
     </div>
 
     <div class="compare-grid">
-      <div class="card compare-card">
-        <div class="card-title">Órdenes vs semana pasada</div>
-        <div class="card-value" id="summaryOrdersVs">-</div>
-        <div class="card-subtle" id="summaryOrdersVsLabel">-</div>
+      <div class="compare-card">
+        <div class="compare-title">Órdenes vs semana pasada</div>
+        <div class="compare-value compare-neutral" id="summaryOrdersVs">-</div>
+        <div class="compare-subtle" id="summaryOrdersVsLabel">-</div>
       </div>
 
-      <div class="card compare-card">
-        <div class="card-title">OnTime vs semana pasada</div>
-        <div class="card-value" id="summaryOnTimeVs">-</div>
-        <div class="card-subtle" id="summaryOnTimeVsLabel">-</div>
+      <div class="compare-card">
+        <div class="compare-title">OnTime vs semana pasada</div>
+        <div class="compare-value compare-neutral" id="summaryOnTimeVs">-</div>
+        <div class="compare-subtle" id="summaryOnTimeVsLabel">-</div>
       </div>
 
-      <div class="card compare-card">
-        <div class="card-title">E2E vs semana pasada</div>
-        <div class="card-value" id="summaryE2EVs">-</div>
-        <div class="card-subtle" id="summaryE2EVsLabel">-</div>
+      <div class="compare-card">
+        <div class="compare-title">E2E vs semana pasada</div>
+        <div class="compare-value compare-neutral" id="summaryE2EVs">-</div>
+        <div class="compare-subtle" id="summaryE2EVsLabel">-</div>
       </div>
 
-      <div class="card compare-card">
-        <div class="card-title">Pick vs semana pasada</div>
-        <div class="card-value" id="summaryPickVs">-</div>
-        <div class="card-subtle" id="summaryPickVsLabel">-</div>
+      <div class="compare-card">
+        <div class="compare-title">Pick vs semana pasada</div>
+        <div class="compare-value compare-neutral" id="summaryPickVs">-</div>
+        <div class="compare-subtle" id="summaryPickVsLabel">-</div>
       </div>
     </div>
   </div>
 
   <div class="charts-wrap hidden" id="rangeChartsSection">
-    <div class="section-header">
+    <div class="charts-header">
       <div>
-        <div class="section-title">Tendencia del rango</div>
-        <div class="section-subtle" id="rangeChartsSubtle">Comparación contra la semana anterior del rango seleccionado</div>
+        <div class="charts-title">Tendencia del rango</div>
+        <div class="charts-subtle" id="rangeChartsSubtle">Comparación contra la semana anterior del rango seleccionado</div>
       </div>
     </div>
 
@@ -529,10 +725,10 @@
   </div>
 
   <div class="table-wrap" id="tableSection">
-    <div class="section-header">
+    <div class="table-header">
       <div>
-        <div class="section-title" id="tableTitle">Detalle por tienda</div>
-        <div class="section-subtle" id="tableSubtle">Haz clic en cualquier KPI para ordenar</div>
+        <div class="table-title" id="tableTitle">Detalle por tienda</div>
+        <div class="table-subtle" id="tableSubtle">Haz clic en cualquier KPI para ordenar</div>
       </div>
     </div>
 
@@ -542,37 +738,39 @@
       <strong>E2E</strong> = desde creación hasta entrega
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th class="sortable" data-sort-key="store_name">
-            <span class="sort-label">Tienda <span class="sort-arrow" data-arrow-for="store_name"></span></span>
-          </th>
-          <th class="sortable align-right" data-sort-key="orders_total">
-            <span class="sort-label">Órdenes <span class="sort-arrow" data-arrow-for="orders_total"></span></span>
-          </th>
-          <th class="sortable align-right" data-sort-key="deliveries_total">
-            <span class="sort-label">Entregas <span class="sort-arrow" data-arrow-for="deliveries_total"></span></span>
-          </th>
-          <th class="sortable align-right" data-sort-key="pick_minutes">
-            <span class="sort-label">Pick <span class="sort-arrow" data-arrow-for="pick_minutes"></span></span>
-          </th>
-          <th class="sortable align-right" data-sort-key="delivery_minutes">
-            <span class="sort-label">Delivery <span class="sort-arrow" data-arrow-for="delivery_minutes"></span></span>
-          </th>
-          <th class="sortable align-right" data-sort-key="e2e_minutes">
-            <span class="sort-label">E2E <span class="sort-arrow" data-arrow-for="e2e_minutes"></span></span>
-          </th>
-          <th class="sortable align-right" data-sort-key="promise_minutes">
-            <span class="sort-label">Promesa <span class="sort-arrow" data-arrow-for="promise_minutes"></span></span>
-          </th>
-          <th class="sortable align-right" data-sort-key="on_time_pct">
-            <span class="sort-label">OnTime % <span class="sort-arrow" data-arrow-for="on_time_pct"></span></span>
-          </th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" data-sort-key="store_name">
+              <span class="sort-label">Tienda <span class="sort-arrow" data-arrow-for="store_name"></span></span>
+            </th>
+            <th class="sortable align-right" data-sort-key="orders_total">
+              <span class="sort-label">Órdenes <span class="sort-arrow" data-arrow-for="orders_total"></span></span>
+            </th>
+            <th class="sortable align-right" data-sort-key="deliveries_total">
+              <span class="sort-label">Entregas <span class="sort-arrow" data-arrow-for="deliveries_total"></span></span>
+            </th>
+            <th class="sortable align-right" data-sort-key="pick_minutes">
+              <span class="sort-label">Pick <span class="sort-arrow" data-arrow-for="pick_minutes"></span></span>
+            </th>
+            <th class="sortable align-right" data-sort-key="delivery_minutes">
+              <span class="sort-label">Delivery <span class="sort-arrow" data-arrow-for="delivery_minutes"></span></span>
+            </th>
+            <th class="sortable align-right" data-sort-key="e2e_minutes">
+              <span class="sort-label">E2E <span class="sort-arrow" data-arrow-for="e2e_minutes"></span></span>
+            </th>
+            <th class="sortable align-right" data-sort-key="promise_minutes">
+              <span class="sort-label">Promesa <span class="sort-arrow" data-arrow-for="promise_minutes"></span></span>
+            </th>
+            <th class="sortable align-right" data-sort-key="on_time_pct">
+              <span class="sort-label">OnTime % <span class="sort-arrow" data-arrow-for="on_time_pct"></span></span>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -951,7 +1149,7 @@
       const labelEl = document.getElementById(labelId);
 
       el.textContent = result.text;
-      el.className = `card-value ${result.className}`;
+      el.className = `compare-value ${result.className}`;
       labelEl.textContent = labelText;
     }
 
@@ -982,23 +1180,18 @@
       document.getElementById('summaryStores').textContent = countUniqueStores(rows);
     }
 
-    function renderOperationalSummary(rows) {
+    function renderHero(rows) {
       const stats = getSummaryStats(rows);
 
       document.getElementById('summaryOrders').textContent = stats.totalOrders;
       document.getElementById('summaryDeliveries').textContent = stats.totalDeliveries;
       document.getElementById('summaryNotDelivered').textContent = stats.notDelivered;
       document.getElementById('summaryCompletion').textContent = stats.completionRate !== null ? formatPercent(stats.completionRate) : '-';
+      document.getElementById('summaryPick').textContent = stats.pickAvg !== null ? formatNumber(stats.pickAvg, 1) : '-';
+      document.getElementById('summaryDelivery').textContent = stats.deliveryAvg !== null ? formatNumber(stats.deliveryAvg, 1) : '-';
+      document.getElementById('summaryE2E').textContent = stats.e2eAvg !== null ? formatNumber(stats.e2eAvg, 1) : '-';
+      document.getElementById('summaryPromise').textContent = stats.promiseAvg !== null ? formatNumber(stats.promiseAvg, 1) : '-';
       document.getElementById('summaryOnTime').textContent = stats.onTimeAvg !== null ? formatPercent(stats.onTimeAvg) : '-';
-    }
-
-    function renderTimingSummary(rows) {
-      const stats = getSummaryStats(rows);
-
-      document.getElementById('summaryPick').textContent = stats.pickAvg !== null ? formatNumber(stats.pickAvg) : '-';
-      document.getElementById('summaryDelivery').textContent = stats.deliveryAvg !== null ? formatNumber(stats.deliveryAvg) : '-';
-      document.getElementById('summaryE2E').textContent = stats.e2eAvg !== null ? formatNumber(stats.e2eAvg) : '-';
-      document.getElementById('summaryPromise').textContent = stats.promiseAvg !== null ? formatNumber(stats.promiseAvg) : '-';
     }
 
     function renderComparison(currentRowsInput, previousRowsInput) {
@@ -1438,10 +1631,12 @@
       if (lastRequestMode === 'range') {
         toggleCompareCards(false);
         tableSection.classList.add('hidden');
-        renderContext(lastPayload, lastRequestMode, filterRowsByStore(lastBaseRows), lastHourLabel);
-        renderOperationalSummary(filterRowsByStore(lastBaseRows));
-        renderTimingSummary(filterRowsByStore(lastBaseRows));
+
+        const filteredRows = filterRowsByStore(lastBaseRows);
+        renderContext(lastPayload, lastRequestMode, filteredRows, lastHourLabel);
+        renderHero(filteredRows);
         renderRangeCharts(lastBaseRows, lastRangePrevRows);
+
         currentRows = [];
         hideTableStatus();
         return;
@@ -1459,8 +1654,7 @@
       document.getElementById('tableSubtle').textContent = 'Haz clic en cualquier KPI para ordenar';
 
       renderContext(lastPayload, lastRequestMode, sortedRows, lastHourLabel);
-      renderOperationalSummary(sortedRows);
-      renderTimingSummary(sortedRows);
+      renderHero(sortedRows);
       renderTable(sortedRows);
       updateSortArrows();
 
