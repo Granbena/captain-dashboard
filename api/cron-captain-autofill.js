@@ -14,6 +14,7 @@ export default async function handler(req, res) {
       });
     }
 
+  
     const supabaseAutofillUrl = process.env.SUPABASE_AUTOFILL_URL;
     const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
