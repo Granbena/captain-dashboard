@@ -48,12 +48,13 @@ export default async function handler(req, res) {
     let response;
     try {
       response = await fetch(url.toString(), {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${supabaseServiceRoleKey}`,
-          apikey: supabaseServiceRoleKey
-        }
-      });
+  method: "GET",
+  headers: {
+    Authorization: `Bearer ${supabaseServiceRoleKey}`,
+    apikey: supabaseServiceRoleKey,
+    "x-cron-secret": cronSecret
+  }
+});
     } catch (e) {
       return res.status(500).json({
         ok: false,
