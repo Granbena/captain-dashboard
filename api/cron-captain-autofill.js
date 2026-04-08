@@ -4,7 +4,7 @@ export default async function handler(req, res) {
     const authHeader = req.headers.authorization;
     const allowDebug = req.query.debug === "1";
 
-    const isCronCall = authHeader === `Bearer ${cronSecret}`;
+    const isCronCall = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
 
     if (!isCronCall && !allowDebug) {
       return res.status(401).json({
@@ -41,20 +41,23 @@ export default async function handler(req, res) {
       });
     }
 
-    url.searchParams.set("days", "60");
-    url.searchParams.set("max_sync_days", "5");
+    const days = String(req.query.days || "60");
+    const maxSyncDays = String(req.query.max_sync_days || "5");
+
+    url.searchParams.set("days", days);
+    url.searchParams.set("max_sync_days", maxSyncDays);
     url.searchParams.set("_ts", Date.now().toString());
 
     let response;
     try {
       response = await fetch(url.toString(), {
-  method: "GET",
-  headers: {
-    Authorization: `Bearer ${supabaseServiceRoleKey}`,
-    apikey: supabaseServiceRoleKey,
-    "x-cron-secret": cronSecret
-  }
-});
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${supabaseServiceRoleKey}`,
+          apikey: supabaseServiceRoleKey,
+          "x-cron-secret": cronSecret
+        }
+      });
     } catch (e) {
       return res.status(500).json({
         ok: false,
