@@ -6,6 +6,7 @@ export default async function handler(req, res) {
     if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return res.status(401).json({
         ok: false,
+        step: "auth",
         error: "Unauthorized"
       });
     }
@@ -16,24 +17,49 @@ export default async function handler(req, res) {
     if (!supabaseAutofillUrl || !supabaseServiceRoleKey) {
       return res.status(500).json({
         ok: false,
+        step: "env-check",
         error: "Missing environment variables",
         hasSupabaseAutofillUrl: !!supabaseAutofillUrl,
-        hasServiceRoleKey: !!supabaseServiceRoleKey
+        hasSupabaseServiceRoleKey: !!supabaseServiceRoleKey,
+        hasCronSecret: !!cronSecret
       });
     }
 
-    const url = new URL(supabaseAutofillUrl);
+    let url;
+    try {
+      url = new URL(supabaseAutofillUrl);
+    } catch (e) {
+      return res.status(500).json({
+        ok: false,
+        step: "url-parse",
+        error: "Invalid SUPABASE_AUTOFILL_URL",
+        value: supabaseAutofillUrl,
+        detail: String(e)
+      });
+    }
+
     url.searchParams.set("days", "60");
     url.searchParams.set("max_sync_days", "5");
     url.searchParams.set("_ts", Date.now().toString());
 
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${supabaseServiceRoleKey}`,
-        apikey: supabaseServiceRoleKey
-      }
-    });
+    let response;
+    try {
+      response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${supabaseServiceRoleKey}`,
+          apikey: supabaseServiceRoleKey
+        }
+      });
+    } catch (e) {
+      return res.status(500).json({
+        ok: false,
+        step: "fetch",
+        error: "Fetch to Supabase failed",
+        requestUrl: url.toString(),
+        detail: String(e)
+      });
+    }
 
     const rawText = await response.text();
 
@@ -41,20 +67,22 @@ export default async function handler(req, res) {
     try {
       parsed = JSON.parse(rawText);
     } catch {
-      parsed = null;
+      parsed = rawText;
     }
 
     return res.status(response.ok ? 200 : 500).json({
       ok: response.ok,
+      step: "done",
       source: "vercel-cron",
       requestUrl: url.toString(),
       responseStatus: response.status,
       responseStatusText: response.statusText,
-      responseBody: parsed ?? rawText
+      responseBody: parsed
     });
   } catch (error) {
     return res.status(500).json({
       ok: false,
+      step: "top-level-catch",
       error: String(error),
       stack: error?.stack || null
     });
