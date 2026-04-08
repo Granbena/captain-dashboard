@@ -660,32 +660,32 @@
   <div class="compare-wrap" id="compareSection">
     <div class="charts-header">
       <div>
-        <div class="charts-title">Comparativo vs semana pasada</div>
+        <div class="charts-title">Comparativo vs periodo anterior</div>
         <div class="charts-subtle">Lectura secundaria para contexto</div>
       </div>
     </div>
 
     <div class="compare-grid">
       <div class="compare-card">
-        <div class="compare-title">Órdenes vs semana pasada</div>
+        <div class="compare-title">Órdenes vs periodo anterior</div>
         <div class="compare-value compare-neutral" id="summaryOrdersVs">-</div>
         <div class="compare-subtle" id="summaryOrdersVsLabel">-</div>
       </div>
 
       <div class="compare-card">
-        <div class="compare-title">OnTime vs semana pasada</div>
+        <div class="compare-title">OnTime vs periodo anterior</div>
         <div class="compare-value compare-neutral" id="summaryOnTimeVs">-</div>
         <div class="compare-subtle" id="summaryOnTimeVsLabel">-</div>
       </div>
 
       <div class="compare-card">
-        <div class="compare-title">E2E vs semana pasada</div>
+        <div class="compare-title">E2E vs periodo anterior</div>
         <div class="compare-value compare-neutral" id="summaryE2EVs">-</div>
         <div class="compare-subtle" id="summaryE2EVsLabel">-</div>
       </div>
 
       <div class="compare-card">
-        <div class="compare-title">Pick vs semana pasada</div>
+        <div class="compare-title">Pick vs periodo anterior</div>
         <div class="compare-value compare-neutral" id="summaryPickVs">-</div>
         <div class="compare-subtle" id="summaryPickVsLabel">-</div>
       </div>
@@ -696,7 +696,7 @@
     <div class="charts-header">
       <div>
         <div class="charts-title">Tendencia del rango</div>
-        <div class="charts-subtle" id="rangeChartsSubtle">Comparación contra la semana anterior del rango seleccionado</div>
+        <div class="charts-subtle" id="rangeChartsSubtle">Comparación contra el periodo anterior del rango seleccionado</div>
       </div>
     </div>
 
@@ -1292,12 +1292,28 @@
       return result;
     }
 
-    function formatShortDayLabel(dateStr) {
+    function formatShortDayName(dateStr) {
       const [year, month, day] = dateStr.split('-').map(Number);
       const date = new Date(Date.UTC(year, month - 1, day));
       const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-      const dayName = dayNames[date.getUTCDay()];
-      return `${dayName} ${String(day).padStart(2, '0')}`;
+      return dayNames[date.getUTCDay()];
+    }
+
+    function formatDisplayDate(dateStr) {
+      if (!dateStr) return '-';
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day));
+      return new Intl.DateTimeFormat('es-CL', {
+        timeZone: 'UTC',
+        weekday: 'short',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }).format(date);
+    }
+
+    function formatRangeLegendLabel(label, start, end) {
+      return `${label} (${start} a ${end})`;
     }
 
     function buildAlignedRangeSeries(currentRows, previousRows) {
@@ -1315,6 +1331,8 @@
       const previousOnTime = [];
       const currentE2E = [];
       const previousE2E = [];
+      const currentDatesAligned = [];
+      const previousDatesAligned = [];
 
       for (let i = 0; i < maxLen; i++) {
         const currentDate = currentDates[i] || null;
@@ -1323,7 +1341,22 @@
         const currentItem = currentDate ? currentMap.get(currentDate) : null;
         const previousItem = previousDate ? previousMap.get(previousDate) : null;
 
-        labels.push(currentDate ? formatShortDayLabel(currentDate) : `Día ${i + 1}`);
+        const currentDayName = currentDate ? formatShortDayName(currentDate) : null;
+        const previousDayName = previousDate ? formatShortDayName(previousDate) : null;
+
+        if (currentDayName && previousDayName) {
+          labels.push(`${currentDayName} / ${previousDayName}`);
+        } else if (currentDayName) {
+          labels.push(currentDayName);
+        } else if (previousDayName) {
+          labels.push(previousDayName);
+        } else {
+          labels.push(`Día ${i + 1}`);
+        }
+
+        currentDatesAligned.push(currentDate);
+        previousDatesAligned.push(previousDate);
+
         currentOrders.push(currentItem?.orders_total ?? 0);
         previousOrders.push(previousItem?.orders_total ?? 0);
         currentOnTime.push(currentItem?.on_time_pct ?? null);
@@ -1334,12 +1367,82 @@
 
       return {
         labels,
+        currentDatesAligned,
+        previousDatesAligned,
         currentOrders,
         previousOrders,
         currentOnTime,
         previousOnTime,
         currentE2E,
         previousE2E,
+      };
+    }
+
+    function buildSharedChartOptions(metricType, aligned) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              title(items) {
+                if (!items.length) return '';
+                const index = items[0].dataIndex;
+                const currentDate = aligned.currentDatesAligned[index];
+                const previousDate = aligned.previousDatesAligned[index];
+
+                const parts = [];
+                if (currentDate) parts.push(`Actual: ${formatDisplayDate(currentDate)}`);
+                if (previousDate) parts.push(`Comparación: ${formatDisplayDate(previousDate)}`);
+                return parts;
+              },
+              label(context) {
+                const datasetLabel = context.dataset.label || '';
+                const value = context.raw;
+
+                if (value === null || value === undefined) {
+                  return `${datasetLabel}: -`;
+                }
+
+                if (metricType === 'orders') {
+                  return `${datasetLabel}: ${Math.round(Number(value) || 0)}`;
+                }
+
+                if (metricType === 'on_time') {
+                  return `${datasetLabel}: ${formatPercent(value)}`;
+                }
+
+                if (metricType === 'e2e') {
+                  return `${datasetLabel}: ${formatNumber(value, 1)} min`;
+                }
+
+                return `${datasetLabel}: ${value}`;
+              }
+            }
+          },
+          legend: {
+            position: 'top'
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              maxRotation: 0,
+              autoSkip: true
+            },
+            title: {
+              display: true,
+              text: 'Día de cada periodo comparado'
+            }
+          },
+          y: {
+            beginAtZero: metricType === 'orders'
+          }
+        }
       };
     }
 
@@ -1352,8 +1455,11 @@
 
       const aligned = buildAlignedRangeSeries(currentRows, previousRows);
 
+      const currentLegendLabel = formatRangeLegendLabel('Actual', lastRangeCurrentStart, lastRangeCurrentEnd);
+      const previousLegendLabel = formatRangeLegendLabel('Comparación', lastRangePrevStart, lastRangePrevEnd);
+
       document.getElementById('rangeChartsSubtle').textContent =
-        `${lastRangeCurrentStart} a ${lastRangeCurrentEnd} vs ${lastRangePrevStart} a ${lastRangePrevEnd}`;
+        `Actual: ${lastRangeCurrentStart} a ${lastRangeCurrentEnd} · Comparación: ${lastRangePrevStart} a ${lastRangePrevEnd}`;
 
       destroyCharts();
 
@@ -1363,19 +1469,16 @@
           labels: aligned.labels,
           datasets: [
             {
-              label: `${lastRangeCurrentStart} a ${lastRangeCurrentEnd}`,
+              label: currentLegendLabel,
               data: aligned.currentOrders
             },
             {
-              label: `${lastRangePrevStart} a ${lastRangePrevEnd}`,
+              label: previousLegendLabel,
               data: aligned.previousOrders
             }
           ]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false
-        }
+        options: buildSharedChartOptions('orders', aligned)
       });
 
       onTimeChartInstance = new Chart(document.getElementById('onTimeChart'), {
@@ -1384,21 +1487,18 @@
           labels: aligned.labels,
           datasets: [
             {
-              label: `${lastRangeCurrentStart} a ${lastRangeCurrentEnd}`,
+              label: currentLegendLabel,
               data: aligned.currentOnTime,
               tension: 0.25
             },
             {
-              label: `${lastRangePrevStart} a ${lastRangePrevEnd}`,
+              label: previousLegendLabel,
               data: aligned.previousOnTime,
               tension: 0.25
             }
           ]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false
-        }
+        options: buildSharedChartOptions('on_time', aligned)
       });
 
       e2eChartInstance = new Chart(document.getElementById('e2eChart'), {
@@ -1407,21 +1507,18 @@
           labels: aligned.labels,
           datasets: [
             {
-              label: `${lastRangeCurrentStart} a ${lastRangeCurrentEnd}`,
+              label: currentLegendLabel,
               data: aligned.currentE2E,
               tension: 0.25
             },
             {
-              label: `${lastRangePrevStart} a ${lastRangePrevEnd}`,
+              label: previousLegendLabel,
               data: aligned.previousE2E,
               tension: 0.25
             }
           ]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false
-        }
+        options: buildSharedChartOptions('e2e', aligned)
       });
     }
 
@@ -1723,7 +1820,7 @@
         lastCurrentDate = request.currentDate;
 
         if (request.compareDate && request.mode !== 'range') {
-          status.textContent = 'Leyendo comparación de semana pasada...';
+          status.textContent = 'Leyendo comparación de periodo anterior...';
 
           const comparePayload = await fetchSingleDayByDate(
             request.compareDate,
@@ -1740,7 +1837,7 @@
           lastRangePrevStart = null;
           lastRangePrevEnd = null;
         } else if (request.mode === 'range' && request.rangePrevStart && request.rangePrevEnd) {
-          status.textContent = 'Leyendo comparación del rango anterior...';
+          status.textContent = 'Leyendo comparación del periodo anterior...';
 
           const rangePrevPayload = await fetchRangeByDates(request.rangePrevStart, request.rangePrevEnd);
           lastRangePrevRows = normalizeRows(rangePrevPayload);
