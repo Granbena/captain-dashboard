@@ -154,7 +154,7 @@
 
     .hero-layout {
       display: grid;
-      grid-template-columns: 1.2fr 1fr;
+      grid-template-columns: 1fr 1.2fr;
       gap: 16px;
       align-items: stretch;
     }
@@ -393,7 +393,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 900px;
+      min-width: 1020px;
     }
 
     th, td {
@@ -595,38 +595,6 @@
 
     <div class="hero-layout">
       <div class="hero-left">
-        <div class="section-title">Operación</div>
-        <div class="section-subtle">Volumen y resultado del día</div>
-
-        <div class="ops-grid">
-          <div class="kpi-card">
-            <div class="kpi-title">Órdenes</div>
-            <div class="kpi-value" id="summaryOrders">0</div>
-          </div>
-
-          <div class="kpi-card">
-            <div class="kpi-title">Entregas</div>
-            <div class="kpi-value" id="summaryDeliveries">0</div>
-          </div>
-
-          <div class="kpi-card">
-            <div class="kpi-title">Activas</div>
-            <div class="kpi-value-small" id="summaryActive">0</div>
-          </div>
-
-          <div class="kpi-card">
-            <div class="kpi-title">Canceladas</div>
-            <div class="kpi-value-small" id="summaryCancelled">0</div>
-          </div>
-
-          <div class="kpi-card">
-            <div class="kpi-title">% completadas</div>
-            <div class="kpi-value-small" id="summaryCompletion">-</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="hero-right">
         <div class="section-title">Tiempos clave</div>
         <div class="section-subtle">Lectura rápida de performance</div>
 
@@ -656,6 +624,38 @@
           <div class="mini-time-card">
             <div class="time-label">On Time %</div>
             <div class="time-value-lg" id="summaryOnTime">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="section-title">Operación</div>
+        <div class="section-subtle">Volumen y resultado del día</div>
+
+        <div class="ops-grid">
+          <div class="kpi-card">
+            <div class="kpi-title">Órdenes</div>
+            <div class="kpi-value" id="summaryOrders">0</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">Entregas</div>
+            <div class="kpi-value" id="summaryDeliveries">0</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">Activas</div>
+            <div class="kpi-value-small" id="summaryActive">0</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">Canceladas</div>
+            <div class="kpi-value-small" id="summaryCancelled">0</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">% completadas</div>
+            <div class="kpi-value-small" id="summaryCompletion">-</div>
           </div>
         </div>
       </div>
@@ -755,6 +755,9 @@
             </th>
             <th class="sortable align-right" data-sort-key="delivered_orders">
               <span class="sort-label">Entregas <span class="sort-arrow" data-arrow-for="delivered_orders"></span></span>
+            </th>
+            <th class="sortable align-right" data-sort-key="active_orders">
+              <span class="sort-label">Activas <span class="sort-arrow" data-arrow-for="active_orders"></span></span>
             </th>
             <th class="sortable align-right" data-sort-key="pick_minutes">
               <span class="sort-label">Pick <span class="sort-arrow" data-arrow-for="pick_minutes"></span></span>
@@ -1571,7 +1574,7 @@
       if (!rows.length) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="8">Sin datos para el filtro seleccionado.</td>
+            <td colspan="9">Sin datos para el filtro seleccionado.</td>
           </tr>
         `;
         return;
@@ -1589,6 +1592,7 @@
           <td>${row.store_name || '-'}</td>
           <td class="align-right">${row.orders_total ?? 0}</td>
           <td class="align-right">${row.delivered_orders ?? row.deliveries_total ?? 0}</td>
+          <td class="align-right">${row.active_orders ?? 0}</td>
           <td class="align-right ${pickClass}">${formatNumber(row.pick_minutes)}</td>
           <td class="align-right ${deliveryClass}">${formatNumber(row.delivery_minutes)}</td>
           <td class="align-right ${e2eClass}">${formatNumber(row.e2e_minutes)}</td>
