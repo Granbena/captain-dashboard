@@ -193,18 +193,18 @@
       min-height: 90px;
     }
 
-    .kpi-title {
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
     .kpi-value {
       font-size: 34px;
       line-height: 1;
       font-weight: 800;
       color: var(--dark);
+    }
+
+    .kpi-title {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 8px;
     }
 
     .kpi-value-small {
@@ -753,8 +753,8 @@
             <th class="sortable align-right" data-sort-key="orders_total">
               <span class="sort-label">Órdenes <span class="sort-arrow" data-arrow-for="orders_total"></span></span>
             </th>
-            <th class="sortable align-right" data-sort-key="deliveries_total">
-              <span class="sort-label">Entregas <span class="sort-arrow" data-arrow-for="deliveries_total"></span></span>
+            <th class="sortable align-right" data-sort-key="delivered_orders">
+              <span class="sort-label">Entregas <span class="sort-arrow" data-arrow-for="delivered_orders"></span></span>
             </th>
             <th class="sortable align-right" data-sort-key="pick_minutes">
               <span class="sort-label">Pick <span class="sort-arrow" data-arrow-for="pick_minutes"></span></span>
@@ -978,8 +978,8 @@
             store_uuid: row.store_uuid,
             store_name: row.store_name,
             orders_total: row.orders_total ?? 0,
-            deliveries_total: row.deliveries_total ?? row.orders_total ?? 0,
-            delivered_orders: row.delivered_orders ?? row.deliveries_total ?? row.orders_total ?? 0,
+            deliveries_total: row.deliveries_total ?? 0,
+            delivered_orders: row.delivered_orders ?? row.deliveries_total ?? 0,
             active_orders: row.active_orders ?? 0,
             cancelled_orders: row.cancelled_orders ?? 0,
             pick_minutes: row.collection_minutes ?? null,
@@ -1114,7 +1114,7 @@
 
     function getSummaryStats(rows) {
       const totalOrders = sum(rows.map(r => r.orders_total));
-      const delivered = sum(rows.map(r => r.delivered_orders || r.deliveries_total || 0));
+      const delivered = sum(rows.map(r => r.delivered_orders ?? r.deliveries_total ?? 0));
       const active = sum(rows.map(r => r.active_orders || 0));
       const cancelled = sum(rows.map(r => r.cancelled_orders || 0));
       const completionRate = totalOrders > 0 ? (delivered / totalOrders) * 100 : null;
@@ -1588,7 +1588,7 @@
         tr.innerHTML = `
           <td>${row.store_name || '-'}</td>
           <td class="align-right">${row.orders_total ?? 0}</td>
-          <td class="align-right">${row.deliveries_total ?? 0}</td>
+          <td class="align-right">${row.delivered_orders ?? row.deliveries_total ?? 0}</td>
           <td class="align-right ${pickClass}">${formatNumber(row.pick_minutes)}</td>
           <td class="align-right ${deliveryClass}">${formatNumber(row.delivery_minutes)}</td>
           <td class="align-right ${e2eClass}">${formatNumber(row.e2e_minutes)}</td>
