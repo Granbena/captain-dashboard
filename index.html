@@ -1144,6 +1144,29 @@
       return { text: absText, className };
     }
 
+    function formatDiffMinutes(current, previous, invertGood = false) {
+      if (current === null || previous === null) {
+        return { text: '-', className: 'compare-neutral' };
+      }
+
+      const diff = current - previous;
+      const absText = `${diff > 0 ? '+' : ''}${diff.toFixed(1)} min`;
+
+      let isPositiveVisual = diff > 0;
+      if (invertGood) {
+        isPositiveVisual = diff < 0;
+      }
+
+      const className =
+        diff === 0
+          ? 'compare-neutral'
+          : isPositiveVisual
+            ? 'compare-positive'
+            : 'compare-negative';
+
+      return { text: absText, className };
+    }
+
     function setCompareCard(id, result, labelId, labelText) {
       const el = document.getElementById(id);
       const labelEl = document.getElementById(labelId);
@@ -1217,16 +1240,16 @@
 
       setCompareCard(
         'summaryE2EVs',
-        formatDiffPercent(currentStats.e2eAvg, previousStats.e2eAvg, true),
+        formatDiffMinutes(currentStats.e2eAvg, previousStats.e2eAvg, true),
         'summaryE2EVsLabel',
-        `${formatNumberCompact(currentStats.e2eAvg)} vs ${formatNumberCompact(previousStats.e2eAvg)}`
+        `${formatNumberCompact(currentStats.e2eAvg)} min vs ${formatNumberCompact(previousStats.e2eAvg)} min`
       );
 
       setCompareCard(
         'summaryPickVs',
-        formatDiffPercent(currentStats.pickAvg, previousStats.pickAvg, true),
+        formatDiffMinutes(currentStats.pickAvg, previousStats.pickAvg, true),
         'summaryPickVsLabel',
-        `${formatNumberCompact(currentStats.pickAvg)} vs ${formatNumberCompact(previousStats.pickAvg)}`
+        `${formatNumberCompact(currentStats.pickAvg)} min vs ${formatNumberCompact(previousStats.pickAvg)} min`
       );
     }
 
