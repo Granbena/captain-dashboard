@@ -43,9 +43,15 @@ export default async function handler(req, res) {
 
     const days = String(req.query.days || "60");
     const maxSyncDays = String(req.query.max_sync_days || "5");
+    const forceRefreshDays = String(req.query.force_refresh_days || "");
 
     url.searchParams.set("days", days);
     url.searchParams.set("max_sync_days", maxSyncDays);
+
+    if (forceRefreshDays) {
+      url.searchParams.set("force_refresh_days", forceRefreshDays);
+    }
+
     url.searchParams.set("_ts", Date.now().toString());
 
     let response;
