@@ -610,8 +610,13 @@
           </div>
 
           <div class="kpi-card">
-            <div class="kpi-title">No entregadas</div>
-            <div class="kpi-value-small" id="summaryNotDelivered">0</div>
+            <div class="kpi-title">Activas</div>
+            <div class="kpi-value-small" id="summaryActive">0</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">Canceladas</div>
+            <div class="kpi-value-small" id="summaryCancelled">0</div>
           </div>
 
           <div class="kpi-card">
@@ -974,6 +979,9 @@
             store_name: row.store_name,
             orders_total: row.orders_total ?? 0,
             deliveries_total: row.deliveries_total ?? row.orders_total ?? 0,
+            delivered_orders: row.delivered_orders ?? row.deliveries_total ?? row.orders_total ?? 0,
+            active_orders: row.active_orders ?? 0,
+            cancelled_orders: row.cancelled_orders ?? 0,
             pick_minutes: row.collection_minutes ?? null,
             delivery_minutes: row.trip_minutes ?? null,
             e2e_minutes: row.delivery_minutes ?? null,
@@ -988,6 +996,9 @@
           store_name: row.store_name,
           orders_total: row.orders_total ?? 0,
           deliveries_total: row.deliveries_total ?? 0,
+          delivered_orders: row.delivered_orders ?? row.deliveries_total ?? 0,
+          active_orders: row.active_orders ?? 0,
+          cancelled_orders: row.cancelled_orders ?? 0,
           pick_minutes: row.pick_minutes ?? null,
           delivery_minutes: row.delivery_minutes ?? null,
           e2e_minutes: row.e2e_minutes ?? null,
@@ -1103,15 +1114,17 @@
 
     function getSummaryStats(rows) {
       const totalOrders = sum(rows.map(r => r.orders_total));
-      const totalDeliveries = sum(rows.map(r => r.deliveries_total));
-      const notDelivered = totalOrders - totalDeliveries;
-      const completionRate = totalOrders > 0 ? (totalDeliveries / totalOrders) * 100 : null;
+      const delivered = sum(rows.map(r => r.delivered_orders || r.deliveries_total || 0));
+      const active = sum(rows.map(r => r.active_orders || 0));
+      const cancelled = sum(rows.map(r => r.cancelled_orders || 0));
+      const completionRate = totalOrders > 0 ? (delivered / totalOrders) * 100 : null;
 
       return {
         uniqueStores: countUniqueStores(rows),
         totalOrders,
-        totalDeliveries,
-        notDelivered,
+        delivered,
+        active,
+        cancelled,
         completionRate,
         pickAvg: avg(rows.map(r => r.pick_minutes)),
         deliveryAvg: avg(rows.map(r => r.delivery_minutes)),
@@ -1207,8 +1220,9 @@
       const stats = getSummaryStats(rows);
 
       document.getElementById('summaryOrders').textContent = stats.totalOrders;
-      document.getElementById('summaryDeliveries').textContent = stats.totalDeliveries;
-      document.getElementById('summaryNotDelivered').textContent = stats.notDelivered;
+      document.getElementById('summaryDeliveries').textContent = stats.delivered;
+      document.getElementById('summaryActive').textContent = stats.active;
+      document.getElementById('summaryCancelled').textContent = stats.cancelled;
       document.getElementById('summaryCompletion').textContent = stats.completionRate !== null ? formatPercent(stats.completionRate) : '-';
       document.getElementById('summaryPick').textContent = stats.pickAvg !== null ? formatNumber(stats.pickAvg, 1) : '-';
       document.getElementById('summaryDelivery').textContent = stats.deliveryAvg !== null ? formatNumber(stats.deliveryAvg, 1) : '-';
