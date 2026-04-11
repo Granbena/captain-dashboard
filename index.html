@@ -524,10 +524,54 @@
     }
     /* ===== Responsive móvil ===== */
 @media (max-width: 768px) {
+
+  /* Tiempos clave en formato compacto, parecido a desktop */
+  .times-grid {
+    grid-template-columns: 1.15fr 0.85fr !important;
+    grid-template-rows: auto auto !important;
+    gap: 10px !important;
+  }
+
+  .e2e-card {
+    grid-row: 1 / span 2 !important;
+    min-height: 180px !important;
+    padding: 14px !important;
+  }
+
+  .mini-time-card {
+    min-height: 85px !important;
+    padding: 12px !important;
+  }
+
+  .bottom-time-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    margin-top: 10px !important;
+  }
+
+  .time-value-xl {
+    font-size: 40px !important;
+  }
+
+  .time-value-lg {
+    font-size: 22px !important;
+  }
+
+  .time-label-e2e {
+    font-size: 16px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .time-label {
+    font-size: 12px !important;
+    margin-bottom: 6px !important;
+  }
+
   body {
     font-size: 14px;
   }
 
+}
   header {
     padding: 10px 14px !important;
     margin-bottom: 8px;
