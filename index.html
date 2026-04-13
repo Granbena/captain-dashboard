@@ -55,6 +55,37 @@
     margin-bottom: 12px;
   }
 
+  .mobile-filter-toggle-wrap {
+    display: none;
+  }
+
+  .mobile-filters-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #ffffff;
+    color: var(--text);
+    border: 1px solid #d1d5db;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .mobile-filters-toggle:hover {
+    opacity: 1;
+  }
+
+  .mobile-filters-icon {
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .filters-body {
+    display: block;
+  }
+
   .mode-tabs {
     display: flex;
     gap: 10px;
@@ -541,14 +572,38 @@
     }
 
     .filters {
-      padding: 14px !important;
+      padding: 12px !important;
       border-radius: 18px !important;
+    }
+
+    .mobile-filter-toggle-wrap {
+      display: block;
+      margin-bottom: 0;
+    }
+
+    .filters-body {
+      display: none;
+      margin-top: 12px;
+    }
+
+    .filters-body.mobile-open {
+      display: block;
+    }
+
+    .filters.compact-today #hourBandField,
+    .filters.compact-today #businessDateField,
+    .filters.compact-today #dateStartField,
+    .filters.compact-today #dateEndField,
+    .filters.compact-today #hourStartField,
+    .filters.compact-today #hourEndField {
+      display: none !important;
     }
 
     .mode-tabs {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      margin-bottom: 12px;
     }
 
     .mode-tab {
@@ -725,59 +780,68 @@
   </div>
 </header>
   
-  <div class="filters">
-    <div class="mode-tabs">
-      <button class="mode-tab active" data-mode="today_live">Hoy</button>
-      <button class="mode-tab" data-mode="single_day">Fecha específica</button>
-      <button class="mode-tab" data-mode="range">Rango</button>
+  <div class="filters" id="filtersCard">
+    <div class="mobile-filter-toggle-wrap">
+      <button id="mobileFiltersToggle" class="mobile-filters-toggle" type="button">
+        <span id="mobileFiltersToggleText">Filtros · Hoy</span>
+        <span class="mobile-filters-icon" id="mobileFiltersToggleIcon">▾</span>
+      </button>
     </div>
 
-    <div class="filters-row">
-      <div class="field hidden" id="businessDateField">
-        <label for="business_date">Fecha</label>
-        <input type="date" id="business_date" />
+    <div class="filters-body" id="filtersBody">
+      <div class="mode-tabs">
+        <button class="mode-tab active" data-mode="today_live">Hoy</button>
+        <button class="mode-tab" data-mode="single_day">Fecha específica</button>
+        <button class="mode-tab" data-mode="range">Rango</button>
       </div>
 
-      <div class="field hidden" id="dateStartField">
-        <label for="date_start">Fecha inicio</label>
-        <input type="date" id="date_start" />
-      </div>
+      <div class="filters-row">
+        <div class="field hidden" id="businessDateField">
+          <label for="business_date">Fecha</label>
+          <input type="date" id="business_date" />
+        </div>
 
-      <div class="field hidden" id="dateEndField">
-        <label for="date_end">Fecha fin</label>
-        <input type="date" id="date_end" />
-      </div>
+        <div class="field hidden" id="dateStartField">
+          <label for="date_start">Fecha inicio</label>
+          <input type="date" id="date_start" />
+        </div>
 
-      <div class="field" id="hourBandField">
-        <label for="hour_band">Vista horaria</label>
-        <select id="hour_band">
-          <option value="all_day">Todo el día</option>
-          <option value="apertura">Apertura · 08:00 - 12:00</option>
-          <option value="almuerzo">Almuerzo · 12:01 - 14:30</option>
-          <option value="valle">Valle · 14:31 - 18:00</option>
-          <option value="cena">Cena · 18:01 - 22:30</option>
-          <option value="valle2">Valle 2 · 22:31 - 03:00</option>
-          <option value="manual">Manual</option>
-        </select>
-      </div>
+        <div class="field hidden" id="dateEndField">
+          <label for="date_end">Fecha fin</label>
+          <input type="date" id="date_end" />
+        </div>
 
-      <div class="field hidden" id="hourStartField">
-        <label for="hour_start">Hora inicio</label>
-        <input type="time" id="hour_start" />
-      </div>
+        <div class="field" id="hourBandField">
+          <label for="hour_band">Vista horaria</label>
+          <select id="hour_band">
+            <option value="all_day">Todo el día</option>
+            <option value="apertura">Apertura · 08:00 - 12:00</option>
+            <option value="almuerzo">Almuerzo · 12:01 - 14:30</option>
+            <option value="valle">Valle · 14:31 - 18:00</option>
+            <option value="cena">Cena · 18:01 - 22:30</option>
+            <option value="valle2">Valle 2 · 22:31 - 03:00</option>
+            <option value="manual">Manual</option>
+          </select>
+        </div>
 
-      <div class="field hidden" id="hourEndField">
-        <label for="hour_end">Hora fin</label>
-        <input type="time" id="hour_end" />
-      </div>
+        <div class="field hidden" id="hourStartField">
+          <label for="hour_start">Hora inicio</label>
+          <input type="time" id="hour_start" />
+        </div>
 
-      <div class="field">
-        <label for="store_filter">Buscar tienda</label>
-        <input type="text" id="store_filter" placeholder="Ej: Ñuñoa" />
-      </div>
+        <div class="field hidden" id="hourEndField">
+          <label for="hour_end">Hora fin</label>
+          <input type="time" id="hour_end" />
+        </div>
 
-      <div class="field">
-        <button id="loadBtn">Cargar dashboard</button>
+        <div class="field" id="storeFilterField">
+          <label for="store_filter">Buscar tienda</label>
+          <input type="text" id="store_filter" placeholder="Ej: Ñuñoa" />
+        </div>
+
+        <div class="field" id="loadButtonField">
+          <button id="loadBtn">Cargar dashboard</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1006,6 +1070,61 @@
     let onTimeChartInstance = null;
     let e2eChartInstance = null;
 
+    let mobileFiltersOpen = false;
+
+    function isMobileView() {
+      return window.innerWidth <= 768;
+    }
+
+    function getModeLabel(mode) {
+      switch (mode) {
+        case 'single_day':
+          return 'Fecha específica';
+        case 'range':
+          return 'Rango';
+        case 'today_live':
+        default:
+          return 'Hoy';
+      }
+    }
+
+    function syncMobileFiltersState(options = {}) {
+      const {
+        forceOpen = false,
+        forceClose = false
+      } = options;
+
+      const filtersCard = document.getElementById('filtersCard');
+      const filtersBody = document.getElementById('filtersBody');
+      const toggleText = document.getElementById('mobileFiltersToggleText');
+      const toggleIcon = document.getElementById('mobileFiltersToggleIcon');
+
+      toggleText.textContent = `Filtros · ${getModeLabel(currentMode)}`;
+
+      if (!isMobileView()) {
+        filtersCard.classList.remove('compact-today');
+        filtersBody.classList.add('mobile-open');
+        toggleIcon.textContent = '▾';
+        return;
+      }
+
+      if (forceOpen) {
+        mobileFiltersOpen = true;
+      }
+
+      if (forceClose) {
+        mobileFiltersOpen = false;
+      }
+
+      if (currentMode !== 'today_live') {
+        mobileFiltersOpen = true;
+      }
+
+      filtersCard.classList.toggle('compact-today', currentMode === 'today_live');
+      filtersBody.classList.toggle('mobile-open', mobileFiltersOpen);
+      toggleIcon.textContent = mobileFiltersOpen ? '▴' : '▾';
+    }
+
     function todayChileIso() {
       const now = new Date();
       const formatter = new Intl.DateTimeFormat('en-CA', {
@@ -1111,12 +1230,18 @@
       const hourStartField = document.getElementById('hourStartField');
       const hourEndField = document.getElementById('hourEndField');
       const band = document.getElementById('hour_band').value;
+      const mobileToday = isMobileView() && currentMode === 'today_live';
 
       if (currentMode === 'today_live') {
         businessDateField.classList.add('hidden');
         dateStartField.classList.add('hidden');
         dateEndField.classList.add('hidden');
-        hourBandField.classList.remove('hidden');
+
+        if (mobileToday) {
+          hourBandField.classList.add('hidden');
+        } else {
+          hourBandField.classList.remove('hidden');
+        }
       } else if (currentMode === 'single_day') {
         businessDateField.classList.remove('hidden');
         dateStartField.classList.add('hidden');
@@ -1131,7 +1256,8 @@
 
       const showManualHours =
         currentMode !== 'range' &&
-        band === 'manual';
+        band === 'manual' &&
+        !(mobileToday);
 
       hourStartField.classList.toggle('hidden', !showManualHours);
       hourEndField.classList.toggle('hidden', !showManualHours);
@@ -2097,6 +2223,12 @@
         }
 
         applyCurrentView();
+
+        if (isMobileView() && currentMode === 'today_live') {
+          syncMobileFiltersState({ forceClose: true });
+        } else {
+          syncMobileFiltersState();
+        }
       } catch (error) {
         status.textContent = `Error de conexión o sync: ${error.message || error}`;
         status.classList.add('error');
@@ -2109,6 +2241,16 @@
         currentMode = btn.dataset.mode;
         updateModeTabs();
         updateFieldVisibility();
+
+        if (isMobileView()) {
+          if (currentMode === 'today_live') {
+            syncMobileFiltersState({ forceOpen: true });
+          } else {
+            syncMobileFiltersState({ forceOpen: true });
+          }
+        } else {
+          syncMobileFiltersState();
+        }
       });
     });
 
@@ -2129,11 +2271,22 @@
       });
     });
 
+    document.getElementById('mobileFiltersToggle').addEventListener('click', () => {
+      if (!isMobileView()) return;
+      mobileFiltersOpen = !mobileFiltersOpen;
+      syncMobileFiltersState();
+    });
+
     document.getElementById('hour_band').addEventListener('change', applyHourBand);
     document.getElementById('loadBtn').addEventListener('click', loadDashboard);
 
     document.getElementById('store_filter').addEventListener('input', () => {
       applyCurrentView();
+    });
+
+    window.addEventListener('resize', () => {
+      updateFieldVisibility();
+      syncMobileFiltersState();
     });
 
     document.getElementById('business_date').value = todayChileIso();
@@ -2145,6 +2298,7 @@
     updateFieldVisibility();
     updateSortArrows();
     clearCompareCards();
+    syncMobileFiltersState();
     loadDashboard();
   </script>
 </body>
