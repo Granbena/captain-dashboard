@@ -204,12 +204,6 @@
     margin-bottom: 12px;
   }
 
-  .section-subtle {
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 14px;
-  }
-
   /* Operación */
   .ops-grid {
     display: grid;
@@ -326,7 +320,7 @@
     color: #000;
   }
 
-  /* Comparativo */
+  /* Comparativos */
   .compare-wrap {
     background: var(--panel);
     border-radius: var(--radius);
@@ -940,27 +934,61 @@
 
     <div class="compare-grid">
       <div class="compare-card">
-        <div class="compare-title">Órdenes vs periodo anterior</div>
+        <div class="compare-title" id="compareTitleOrders">Órdenes vs periodo anterior</div>
         <div class="compare-value compare-neutral" id="summaryOrdersVs">-</div>
         <div class="compare-subtle" id="summaryOrdersVsLabel">-</div>
       </div>
 
       <div class="compare-card">
-        <div class="compare-title">OnTime vs periodo anterior</div>
+        <div class="compare-title" id="compareTitleOnTime">OnTime vs periodo anterior</div>
         <div class="compare-value compare-neutral" id="summaryOnTimeVs">-</div>
         <div class="compare-subtle" id="summaryOnTimeVsLabel">-</div>
       </div>
 
       <div class="compare-card">
-        <div class="compare-title">E2E vs periodo anterior</div>
+        <div class="compare-title" id="compareTitleE2E">E2E vs periodo anterior</div>
         <div class="compare-value compare-neutral" id="summaryE2EVs">-</div>
         <div class="compare-subtle" id="summaryE2EVsLabel">-</div>
       </div>
 
       <div class="compare-card">
-        <div class="compare-title">Pick vs periodo anterior</div>
+        <div class="compare-title" id="compareTitlePick">Pick vs periodo anterior</div>
         <div class="compare-value compare-neutral" id="summaryPickVs">-</div>
         <div class="compare-subtle" id="summaryPickVsLabel">-</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="compare-wrap hidden" id="compareYearSection">
+    <div class="charts-header">
+      <div>
+        <div class="charts-title">Comparativo vs misma hora año anterior</div>
+      </div>
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-card">
+        <div class="compare-title">Órdenes vs misma hora año anterior</div>
+        <div class="compare-value compare-neutral" id="summaryOrdersYearVs">-</div>
+        <div class="compare-subtle" id="summaryOrdersYearVsLabel">-</div>
+      </div>
+
+      <div class="compare-card">
+        <div class="compare-title">OnTime vs misma hora año anterior</div>
+        <div class="compare-value compare-neutral" id="summaryOnTimeYearVs">-</div>
+        <div class="compare-subtle" id="summaryOnTimeYearVsLabel">-</div>
+      </div>
+
+      <div class="compare-card">
+        <div class="compare-title">E2E vs misma hora año anterior</div>
+        <div class="compare-value compare-neutral" id="summaryE2EYearVs">-</div>
+        <div class="compare-subtle" id="summaryE2EYearVsLabel">-</div>
+      </div>
+
+      <div class="compare-card">
+        <div class="compare-title">Pick vs misma hora año anterior</div>
+        <div class="compare-value compare-neutral" id="summaryPickYearVs">-</div>
+        <div class="compare-subtle" id="summaryPickYearVsLabel">-</div>
       </div>
     </div>
   </div>
@@ -1054,6 +1082,7 @@
     const API_URL_DAILY = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read';
     const API_URL_LIVE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read-live';
     const API_URL_SYNC = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-sync';
+    const API_URL_HISTORY_COMPARE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-history-compare';
 
     let currentMode = 'today_live';
     let currentRows = [];
@@ -1061,16 +1090,19 @@
 
     let lastBaseRows = [];
     let lastCompareRows = [];
+    let lastYearCompareRows = [];
     let lastRangePrevRows = [];
     let lastPayload = null;
     let lastHourLabel = '-';
     let lastRequestMode = 'today_live';
     let lastCurrentDate = null;
     let lastCompareDate = null;
+    let lastYearCompareDate = null;
     let lastRangeCurrentStart = null;
     let lastRangeCurrentEnd = null;
     let lastRangePrevStart = null;
     let lastRangePrevEnd = null;
+    let lastCutoffTime = null;
 
     let ordersChartInstance = null;
     let onTimeChartInstance = null;
@@ -1103,42 +1135,6 @@
         hour12: false
       });
       return formatter.format(now);
-    }
-
-    function setCompareTitles() {
-      const isTodayMode = lastRequestMode === 'today_live' || currentMode === 'today_live';
-      document.getElementById('compareTitle').textContent = isTodayMode
-        ? 'Comparativo vs misma hora semana anterior'
-        : 'Comparativo vs periodo anterior';
-
-      document.querySelector('.compare-card:nth-child(1) .compare-title').textContent = isTodayMode
-        ? 'Órdenes vs misma hora semana anterior'
-        : 'Órdenes vs periodo anterior';
-
-      document.querySelector('.compare-card:nth-child(2) .compare-title').textContent = isTodayMode
-        ? 'OnTime vs misma hora semana anterior'
-        : 'OnTime vs periodo anterior';
-
-      document.querySelector('.compare-card:nth-child(3) .compare-title').textContent = isTodayMode
-        ? 'E2E vs misma hora semana anterior'
-        : 'E2E vs periodo anterior';
-
-      document.querySelector('.compare-card:nth-child(4) .compare-title').textContent = isTodayMode
-        ? 'Pick vs misma hora semana anterior'
-        : 'Pick vs periodo anterior';
-    }
-
-    function updateCutoffBadge(requestMode) {
-      const pill = document.getElementById('summaryCutoffPill');
-      const value = document.getElementById('summaryCutoff');
-
-      if (requestMode === 'today_live') {
-        value.textContent = getChileNowTime();
-        pill.classList.remove('hidden');
-      } else {
-        value.textContent = '-';
-        pill.classList.add('hidden');
-      }
     }
 
     function syncMobileFiltersState(options = {}) {
@@ -1205,6 +1201,10 @@
       const date = new Date(Date.UTC(year, month - 1, day));
       date.setUTCDate(date.getUTCDate() + days);
       return date.toISOString().slice(0, 10);
+    }
+
+    function getSameWeekdayLastYear(dateStr) {
+      return shiftDate(dateStr, -364);
     }
 
     function formatNumber(value, decimals = 2) {
@@ -1574,10 +1574,19 @@
       setCompareCard('summaryOnTimeVs', { text: '-', className: 'compare-neutral' }, 'summaryOnTimeVsLabel', '-');
       setCompareCard('summaryE2EVs', { text: '-', className: 'compare-neutral' }, 'summaryE2EVsLabel', '-');
       setCompareCard('summaryPickVs', { text: '-', className: 'compare-neutral' }, 'summaryPickVsLabel', '-');
+
+      setCompareCard('summaryOrdersYearVs', { text: '-', className: 'compare-neutral' }, 'summaryOrdersYearVsLabel', '-');
+      setCompareCard('summaryOnTimeYearVs', { text: '-', className: 'compare-neutral' }, 'summaryOnTimeYearVsLabel', '-');
+      setCompareCard('summaryE2EYearVs', { text: '-', className: 'compare-neutral' }, 'summaryE2EYearVsLabel', '-');
+      setCompareCard('summaryPickYearVs', { text: '-', className: 'compare-neutral' }, 'summaryPickYearVsLabel', '-');
     }
 
     function toggleCompareCards(show) {
       document.getElementById('compareSection').classList.toggle('hidden', !show);
+    }
+
+    function toggleYearCompareCards(show) {
+      document.getElementById('compareYearSection').classList.toggle('hidden', !show);
     }
 
     function renderContext(payload, requestMode, rows, hourLabel) {
@@ -1596,6 +1605,43 @@
       document.getElementById('summaryStores').textContent = countUniqueStores(rows);
     }
 
+    function updateCutoffBadge(requestMode) {
+      const pill = document.getElementById('summaryCutoffPill');
+      const value = document.getElementById('summaryCutoff');
+
+      if (requestMode === 'today_live' && lastCutoffTime) {
+        value.textContent = lastCutoffTime;
+        pill.classList.remove('hidden');
+      } else {
+        value.textContent = '-';
+        pill.classList.add('hidden');
+      }
+    }
+
+    function setCompareTitles() {
+      const isTodayMode = lastRequestMode === 'today_live' || currentMode === 'today_live';
+
+      document.getElementById('compareTitle').textContent = isTodayMode
+        ? 'Comparativo vs misma hora semana anterior'
+        : 'Comparativo vs periodo anterior';
+
+      document.getElementById('compareTitleOrders').textContent = isTodayMode
+        ? 'Órdenes vs misma hora semana anterior'
+        : 'Órdenes vs periodo anterior';
+
+      document.getElementById('compareTitleOnTime').textContent = isTodayMode
+        ? 'OnTime vs misma hora semana anterior'
+        : 'OnTime vs periodo anterior';
+
+      document.getElementById('compareTitleE2E').textContent = isTodayMode
+        ? 'E2E vs misma hora semana anterior'
+        : 'E2E vs periodo anterior';
+
+      document.getElementById('compareTitlePick').textContent = isTodayMode
+        ? 'Pick vs misma hora semana anterior'
+        : 'Pick vs periodo anterior';
+    }
+
     function renderHero(rows) {
       const stats = getSummaryStats(rows);
 
@@ -1611,38 +1657,47 @@
       document.getElementById('summaryOnTime').textContent = stats.onTimeAvg !== null ? formatPercent(stats.onTimeAvg) : '-';
     }
 
-    function renderComparison(currentRowsInput, previousRowsInput) {
+    function renderComparison(currentRowsInput, previousRowsInput, targetPrefix = '') {
       const currentRowsFiltered = filterRowsByStore(currentRowsInput);
       const previousRowsFiltered = filterRowsByStore(previousRowsInput);
 
       const currentStats = getSummaryStats(currentRowsFiltered);
       const previousStats = getSummaryStats(previousRowsFiltered);
 
+      const idOrders = targetPrefix ? `summaryOrders${targetPrefix}Vs` : 'summaryOrdersVs';
+      const idOrdersLabel = targetPrefix ? `summaryOrders${targetPrefix}VsLabel` : 'summaryOrdersVsLabel';
+      const idOnTime = targetPrefix ? `summaryOnTime${targetPrefix}Vs` : 'summaryOnTimeVs';
+      const idOnTimeLabel = targetPrefix ? `summaryOnTime${targetPrefix}VsLabel` : 'summaryOnTimeVsLabel';
+      const idE2E = targetPrefix ? `summaryE2E${targetPrefix}Vs` : 'summaryE2EVs';
+      const idE2ELabel = targetPrefix ? `summaryE2E${targetPrefix}VsLabel` : 'summaryE2EVsLabel';
+      const idPick = targetPrefix ? `summaryPick${targetPrefix}Vs` : 'summaryPickVs';
+      const idPickLabel = targetPrefix ? `summaryPick${targetPrefix}VsLabel` : 'summaryPickVsLabel';
+
       setCompareCard(
-        'summaryOrdersVs',
+        idOrders,
         formatDiffPercent(currentStats.totalOrders, previousStats.totalOrders, false),
-        'summaryOrdersVsLabel',
+        idOrdersLabel,
         `${formatInteger(currentStats.totalOrders)} vs ${formatInteger(previousStats.totalOrders)}`
       );
 
       setCompareCard(
-        'summaryOnTimeVs',
+        idOnTime,
         formatDiffPercent(currentStats.onTimeAvg, previousStats.onTimeAvg, false),
-        'summaryOnTimeVsLabel',
+        idOnTimeLabel,
         `${formatPercent(currentStats.onTimeAvg)} vs ${formatPercent(previousStats.onTimeAvg)}`
       );
 
       setCompareCard(
-        'summaryE2EVs',
+        idE2E,
         formatDiffMinutes(currentStats.e2eAvg, previousStats.e2eAvg, true),
-        'summaryE2EVsLabel',
+        idE2ELabel,
         `${formatNumberCompact(currentStats.e2eAvg)} min vs ${formatNumberCompact(previousStats.e2eAvg)} min`
       );
 
       setCompareCard(
-        'summaryPickVs',
+        idPick,
         formatDiffMinutes(currentStats.pickAvg, previousStats.pickAvg, true),
-        'summaryPickVsLabel',
+        idPickLabel,
         `${formatNumberCompact(currentStats.pickAvg)} min vs ${formatNumberCompact(previousStats.pickAvg)} min`
       );
     }
@@ -2011,15 +2066,17 @@
       let syncDate = null;
       let currentDate = null;
       let compareDate = null;
+      let compareYearDate = null;
       let rangePrevStart = null;
       let rangePrevEnd = null;
+      let cutoffTime = null;
 
       if (currentMode === 'today_live') {
         const today = todayChileIso();
-        const nowTime = getChileNowTime();
         syncDate = today;
         currentDate = today;
         compareDate = getSameDayLastWeek(today);
+        compareYearDate = getSameWeekdayLastYear(today);
 
         url = new URL(API_URL_LIVE);
         url.searchParams.set('business_date', today);
@@ -2027,12 +2084,15 @@
         if (hourBand === 'manual' && hourStartText && hourEndText) {
           addTimeParams(url, hourBand, hourStartText, hourEndText);
           hourLabel = getHourLabel(hourBand, hourStartText, hourEndText);
+          cutoffTime = hourEndText;
         } else if (hourBand !== 'all_day' && hourBand !== 'manual') {
           addTimeParams(url, hourBand, hourStartText, hourEndText);
           hourLabel = getHourLabel(hourBand, hourStartText, hourEndText);
+          cutoffTime = getBandRange(hourBand).end;
         } else {
+          cutoffTime = getChileNowTime();
           url.searchParams.set('time_start', '00:00');
-          url.searchParams.set('time_end', nowTime);
+          url.searchParams.set('time_end', cutoffTime);
           hourLabel = 'Todo el día';
         }
       } else if (currentMode === 'single_day') {
@@ -2075,6 +2135,8 @@
         syncDate,
         currentDate,
         compareDate,
+        compareYearDate,
+        cutoffTime,
         rangePrevStart,
         rangePrevEnd
       };
@@ -2128,6 +2190,31 @@
       return payload;
     }
 
+    async function fetchHistoryCompareByDate(date, cutoffTime) {
+      const url = new URL(API_URL_HISTORY_COMPARE);
+      const storeFilter = document.getElementById('store_filter').value.trim();
+
+      url.searchParams.set('business_date', date);
+      url.searchParams.set('cutoff_time', cutoffTime);
+      if (storeFilter) {
+        url.searchParams.set('store_filter', storeFilter);
+      }
+      url.searchParams.set('_ts', Date.now().toString());
+
+      const res = await fetch(url.toString(), {
+        method: 'GET',
+        cache: 'no-store'
+      });
+
+      const payload = await res.json();
+
+      if (!res.ok || !payload.ok) {
+        throw new Error(payload?.error || 'Error leyendo histórico comparable');
+      }
+
+      return payload;
+    }
+
     async function fetchRangeByDates(dateStart, dateEnd) {
       const url = new URL(API_URL_DAILY);
       url.searchParams.set('date_start', dateStart);
@@ -2155,6 +2242,7 @@
 
       if (lastRequestMode === 'range') {
         toggleCompareCards(false);
+        toggleYearCompareCards(false);
         tableSection.classList.add('hidden');
 
         const filteredRows = filterRowsByStore(lastBaseRows);
@@ -2191,6 +2279,13 @@
         renderComparison(lastBaseRows, lastCompareRows);
       } else {
         clearCompareCards();
+      }
+
+      if (lastRequestMode === 'today_live' && lastYearCompareRows.length) {
+        toggleYearCompareCards(true);
+        renderComparison(lastBaseRows, lastYearCompareRows, 'Year');
+      } else {
+        toggleYearCompareCards(false);
       }
 
       const status = document.getElementById('status');
@@ -2250,6 +2345,9 @@
         lastHourLabel = request.hourLabel;
         lastRequestMode = request.mode;
         lastCurrentDate = request.currentDate;
+        lastCompareDate = request.compareDate || null;
+        lastYearCompareDate = request.compareYearDate || null;
+        lastCutoffTime = request.cutoffTime || null;
 
         if (request.compareDate && request.mode !== 'range') {
           status.textContent = request.mode === 'today_live'
@@ -2260,10 +2358,10 @@
           let compareHourStart = hourStartText;
           let compareHourEnd = hourEndText;
 
-          if (request.mode === 'today_live' && hourBand === 'all_day') {
+          if (request.mode === 'today_live' && request.cutoffTime) {
             compareBand = 'manual';
             compareHourStart = '00:00';
-            compareHourEnd = getChileNowTime();
+            compareHourEnd = request.cutoffTime;
           }
 
           const comparePayload = await fetchSingleDayByDate(
@@ -2274,7 +2372,18 @@
           );
 
           lastCompareRows = normalizeRows(comparePayload);
-          lastCompareDate = request.compareDate;
+
+          if (request.mode === 'today_live' && request.compareYearDate && request.cutoffTime) {
+            status.textContent = 'Leyendo comparación a misma hora del año anterior...';
+            const yearComparePayload = await fetchHistoryCompareByDate(
+              request.compareYearDate,
+              request.cutoffTime
+            );
+            lastYearCompareRows = normalizeRows(yearComparePayload);
+          } else {
+            lastYearCompareRows = [];
+          }
+
           lastRangePrevRows = [];
           lastRangeCurrentStart = null;
           lastRangeCurrentEnd = null;
@@ -2286,19 +2395,25 @@
           const rangePrevPayload = await fetchRangeByDates(request.rangePrevStart, request.rangePrevEnd);
           lastRangePrevRows = normalizeRows(rangePrevPayload);
           lastCompareRows = [];
+          lastYearCompareRows = [];
           lastCompareDate = null;
+          lastYearCompareDate = null;
           lastRangeCurrentStart = payload.requested_date_start;
           lastRangeCurrentEnd = payload.requested_date_end;
           lastRangePrevStart = request.rangePrevStart;
           lastRangePrevEnd = request.rangePrevEnd;
+          lastCutoffTime = null;
         } else {
           lastCompareRows = [];
+          lastYearCompareRows = [];
           lastCompareDate = null;
+          lastYearCompareDate = null;
           lastRangePrevRows = [];
           lastRangeCurrentStart = null;
           lastRangeCurrentEnd = null;
           lastRangePrevStart = null;
           lastRangePrevEnd = null;
+          lastCutoffTime = null;
         }
 
         applyCurrentView();
@@ -2324,11 +2439,7 @@
         updateCutoffBadge(currentMode);
 
         if (isMobileView()) {
-          if (currentMode === 'today_live') {
-            syncMobileFiltersState({ forceOpen: true });
-          } else {
-            syncMobileFiltersState({ forceOpen: true });
-          }
+          syncMobileFiltersState({ forceOpen: true });
         } else {
           syncMobileFiltersState();
         }
