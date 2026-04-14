@@ -1715,10 +1715,20 @@
       setCompareCard('summaryOnTimeVs', { text: '-', className: 'compare-neutral' }, 'summaryOnTimeVsLabel', '-');
       setCompareCard('summaryE2EVs', { text: '-', className: 'compare-neutral' }, 'summaryE2EVsLabel', '-');
       setCompareCard('summaryPickVs', { text: '-', className: 'compare-neutral' }, 'summaryPickVsLabel', '-');
+      setCompareCard('summaryOrdersYearVs', { text: '-', className: 'compare-neutral' }, 'summaryOrdersYearVsLabel', '-');
+      setCompareCard('summaryOnTimeYearVs', { text: '-', className: 'compare-neutral' }, 'summaryOnTimeYearVsLabel', '-');
+      setCompareCard('summaryE2EYearVs', { text: '-', className: 'compare-neutral' }, 'summaryE2EYearVsLabel', '-');
+      setCompareCard('summaryPickYearVs', { text: '-', className: 'compare-neutral' }, 'summaryPickYearVsLabel', '-');
     }
 
     function toggleCompareCards(show) {
       document.getElementById('compareSection').classList.toggle('hidden', !show);
+    }
+
+    function toggleYearCompareCards(show) {
+      const el = document.getElementById('compareYearSection');
+      if (!el) return;
+      el.classList.toggle('hidden', !show);
     }
 
     function renderContext(payload, requestMode, rows, hourLabel) {
