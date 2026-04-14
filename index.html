@@ -1762,41 +1762,41 @@
       document.getElementById('summaryOnTime').textContent = stats.onTimeAvg !== null ? formatPercent(stats.onTimeAvg) : '-';
     }
 
-    function renderComparison(currentRowsInput, previousRowsInput) {
-      const currentRowsFiltered = filterRowsByStore(currentRowsInput);
-      const previousRowsFiltered = filterRowsByStore(previousRowsInput);
+   function renderYearComparison(currentRowsInput, previousRowsInput) {
+  const currentRowsFiltered = filterRowsByStore(currentRowsInput);
+  const previousRowsFiltered = filterRowsByStore(previousRowsInput);
 
-      const currentStats = getSummaryStats(currentRowsFiltered);
-      const previousStats = getSummaryStats(previousRowsFiltered);
+  const currentStats = getSummaryStats(currentRowsFiltered);
+  const previousStats = getSummaryStats(previousRowsFiltered);
 
-      setCompareCard(
-        'summaryOrdersVs',
-        formatDiffPercent(currentStats.totalOrders, previousStats.totalOrders, false),
-        'summaryOrdersVsLabel',
-        `${formatInteger(currentStats.totalOrders)} vs ${formatInteger(previousStats.totalOrders)}`
-      );
+  setCompareCard(
+    'summaryOrdersYearVs',
+    formatDiffPercent(currentStats.totalOrders, previousStats.totalOrders, false),
+    'summaryOrdersYearVsLabel',
+    `${formatInteger(currentStats.totalOrders)} vs ${formatInteger(previousStats.totalOrders)}`
+  );
 
-      setCompareCard(
-        'summaryOnTimeVs',
-        formatDiffPercent(currentStats.onTimeAvg, previousStats.onTimeAvg, false),
-        'summaryOnTimeVsLabel',
-        `${formatPercent(currentStats.onTimeAvg)} vs ${formatPercent(previousStats.onTimeAvg)}`
-      );
+  setCompareCard(
+    'summaryOnTimeYearVs',
+    formatDiffPercent(currentStats.onTimeAvg, previousStats.onTimeAvg, false),
+    'summaryOnTimeYearVsLabel',
+    `${formatPercent(currentStats.onTimeAvg)} vs ${formatPercent(previousStats.onTimeAvg)}`
+  );
 
-      setCompareCard(
-        'summaryE2EVs',
-        formatDiffMinutes(currentStats.e2eAvg, previousStats.e2eAvg, true),
-        'summaryE2EVsLabel',
-        `${formatNumberCompact(currentStats.e2eAvg)} min vs ${formatNumberCompact(previousStats.e2eAvg)} min`
-      );
+  setCompareCard(
+    'summaryE2EYearVs',
+    formatDiffMinutes(currentStats.e2eAvg, previousStats.e2eAvg, true),
+    'summaryE2EYearVsLabel',
+    `${formatNumberCompact(currentStats.e2eAvg)} min vs ${formatNumberCompact(previousStats.e2eAvg)} min`
+  );
 
-      setCompareCard(
-        'summaryPickVs',
-        formatDiffMinutes(currentStats.pickAvg, previousStats.pickAvg, true),
-        'summaryPickVsLabel',
-        `${formatNumberCompact(currentStats.pickAvg)} min vs ${formatNumberCompact(previousStats.pickAvg)} min`
-      );
-    }
+  setCompareCard(
+    'summaryPickYearVs',
+    formatDiffMinutes(currentStats.pickAvg, previousStats.pickAvg, true),
+    'summaryPickYearVsLabel',
+    `${formatNumberCompact(currentStats.pickAvg)} min vs ${formatNumberCompact(previousStats.pickAvg)} min`
+  );
+}
 
     function destroyCharts() {
       if (ordersChartInstance) {
@@ -2222,7 +2222,7 @@
         } else if (hourBand !== 'all_day' && hourBand !== 'manual') {
           cutoffTime = getBandRange(hourBand).end;
         } else {
-          cutoffTime = '23:59';
+          cutoffTime = '23:59:59';
         }
       } else {
         url = new URL(API_URL_DAILY);
@@ -2306,29 +2306,36 @@
     }
 
     async function fetchHistoryCompareByDate(date, cutoffTime) {
-      const url = new URL(API_URL_HISTORY_COMPARE);
-      const storeFilter = document.getElementById('store_filter').value.trim();
+  const url = new URL(API_URL_HISTORY_COMPARE);
+  const storeFilter = document.getElementById('store_filter').value.trim();
 
-      url.searchParams.set('business_date', date);
-      url.searchParams.set('cutoff_time', cutoffTime);
-      if (storeFilter) {
-        url.searchParams.set('store_filter', storeFilter);
-      }
-      url.searchParams.set('_ts', Date.now().toString());
+  const normalizedCutoff =
+    cutoffTime && cutoffTime.length === 5
+      ? `${cutoffTime}:00`
+      : cutoffTime;
 
-      const res = await fetch(url.toString(), {
-        method: 'GET',
-        cache: 'no-store'
-      });
+  url.searchParams.set('business_date', date);
+  url.searchParams.set('cutoff_time', normalizedCutoff);
 
-      const payload = await res.json();
+  if (storeFilter) {
+    url.searchParams.set('store_filter', storeFilter);
+  }
 
-      if (!res.ok || !payload.ok) {
-        throw new Error(payload?.error || 'Error leyendo histórico comparable');
-      }
+  url.searchParams.set('_ts', Date.now().toString());
 
-      return payload;
-    }
+  const res = await fetch(url.toString(), {
+    method: 'GET',
+    cache: 'no-store'
+  });
+
+  const payload = await res.json();
+
+  if (!res.ok || !payload.ok) {
+    throw new Error(payload?.error || 'Error leyendo histórico comparable');
+  }
+
+  return payload;
+}
 
     async function fetchRangeByDates(dateStart, dateEnd) {
       const url = new URL(API_URL_DAILY);
@@ -2399,8 +2406,8 @@
       }
 
       if (lastYearCompareRows.length) {
-        renderComparison(lastBaseRows, lastYearCompareRows, 'Year');
-      }
+  renderYearComparison(lastBaseRows, lastYearCompareRows);
+}
 
       updateCompareVisibility();
 
