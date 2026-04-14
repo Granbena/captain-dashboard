@@ -1233,21 +1233,24 @@
     }
 
     function getPrimaryCompareAvailable() {
-      if (lastRequestMode === 'range') return lastRangePrevRows.length > 0;
-      return lastCompareRows.length > 0;
-    }
+  if (lastRequestMode === 'range') return false;
+  return lastCompareRows.length > 0;
+}
 
     function getYearCompareAvailable() {
       return lastYearCompareRows.length > 0;
     }
 
     function updateCompareToggleLabels() {
-      const isTodayMode = lastRequestMode === 'today_live' || currentMode === 'today_live';
-      const primaryLabel = isTodayMode ? 'Semana anterior' : 'Periodo anterior';
+  const isTodayMode = lastRequestMode === 'today_live' || currentMode === 'today_live';
+  const isRangeMode = lastRequestMode === 'range' || currentMode === 'range';
+  const primaryLabel = isTodayMode ? 'Semana anterior' : 'Periodo anterior';
 
-      document.getElementById('compareViewPrimaryLabel').textContent = primaryLabel;
-      document.getElementById('compareViewYearLabel').textContent = 'Año anterior';
-    }
+  document.getElementById('compareViewPrimaryLabel').textContent = primaryLabel;
+  document.getElementById('compareViewYearLabel').textContent = isRangeMode
+    ? 'Año anterior'
+    : 'Año anterior';
+}
 
     function updateCompareToggleButtons() {
       document.getElementById('compareViewPrimaryBtn').classList.toggle('active', compareView === 'primary');
@@ -1256,26 +1259,31 @@
     }
 
     function updateCompareVisibility() {
-      const primaryAvailable = getPrimaryCompareAvailable();
-      const yearAvailable = getYearCompareAvailable();
+  const primaryAvailable = getPrimaryCompareAvailable();
+  const yearAvailable = getYearCompareAvailable();
 
-      const showPrimary = primaryAvailable && (compareView === 'primary' || compareView === 'both');
-      const showYear = yearAvailable && (compareView === 'year' || compareView === 'both');
+  const primaryBtn = document.getElementById('compareViewPrimaryBtn');
+  const bothBtn = document.getElementById('compareViewBothBtn');
 
-      const primarySection = document.getElementById('compareSection');
-      const primaryGrid = document.getElementById('comparePrimaryGrid');
-      const yearSection = document.getElementById('compareYearSection');
-      const yearGrid = document.getElementById('compareYearGrid');
+  if (lastRequestMode === 'range') {
+    primaryBtn.classList.add('hidden');
+    bothBtn.classList.add('hidden');
+    compareView = 'year';
+  } else {
+    primaryBtn.classList.remove('hidden');
+    bothBtn.classList.remove('hidden');
+  }
 
-      primarySection.classList.toggle('hidden', !(primaryAvailable || yearAvailable));
-      primaryGrid.classList.toggle('hidden', !showPrimary);
-      yearSection.classList.toggle('hidden', !showYear);
-      yearGrid.classList.toggle('hidden', !showYear);
+  const showPrimary = primaryAvailable && (compareView === 'primary' || compareView === 'both');
+  const showYear = yearAvailable && (compareView === 'year' || compareView === 'both');
 
-      document.getElementById('compareViewPrimaryBtn').disabled = !primaryAvailable;
-      document.getElementById('compareViewYearBtn').disabled = !yearAvailable;
-      document.getElementById('compareViewBothBtn').disabled = !(primaryAvailable || yearAvailable);
-    }
+  toggleCompareCards(showPrimary);
+  toggleYearCompareCards(showYear);
+
+  document.getElementById('compareViewPrimaryBtn').disabled = !primaryAvailable;
+  document.getElementById('compareViewYearBtn').disabled = !yearAvailable;
+  document.getElementById('compareViewBothBtn').disabled = !(primaryAvailable || yearAvailable);
+}
 
     function setCompareView(view, { force = false } = {}) {
       if (!force && compareView === view) return;
@@ -2404,23 +2412,28 @@
       const tableSection = document.getElementById('tableSection');
 
       if (lastRequestMode === 'range') {
-        tableSection.classList.add('hidden');
+  tableSection.classList.add('hidden');
 
-        const filteredRows = filterRowsByStore(lastBaseRows);
-        renderContext(lastPayload, lastRequestMode, filteredRows, lastHourLabel);
-        updateCutoffBadge(lastRequestMode);
-        setCompareTitles();
-        renderHero(filteredRows);
+  const filteredRows = filterRowsByStore(lastBaseRows);
+  renderContext(lastPayload, lastRequestMode, filteredRows, lastHourLabel);
+  updateCutoffBadge(lastRequestMode);
+  setCompareTitles();
+  renderHero(filteredRows);
 
-        const rangeCompareRows = lastYearCompareRows.length ? lastYearCompareRows : lastRangePrevRows;
-        renderRangeCharts(lastBaseRows, rangeCompareRows);
+  toggleCompareCards(false);
+  toggleYearCompareCards(lastYearCompareRows.length > 0);
 
-        currentRows = [];
-        hideTableStatus();
+  if (lastYearCompareRows.length) {
+    renderYearComparison(lastBaseRows, lastYearCompareRows);
+    renderRangeCharts(lastBaseRows, lastYearCompareRows);
+  } else {
+    hideRangeCharts();
+  }
 
-        updateCompareVisibility();
-        return;
-      }
+  currentRows = [];
+  hideTableStatus();
+  return;
+}
 
       toggleCompareCards(true);
       tableSection.classList.remove('hidden');
