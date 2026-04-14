@@ -2076,9 +2076,10 @@
 
       const currentLegendLabel = formatRangeLegendLabel('Actual', lastRangeCurrentStart, lastRangeCurrentEnd);
       const isYearCompare = !!(lastRangeYearStart && lastRangeYearEnd && previousRowsRaw === lastYearCompareRows);
-      const previousLegendLabel = isYearCompare
-        ? formatRangeLegendLabel('Año anterior', lastRangeYearStart, lastRangeYearEnd)
-        : formatRangeLegendLabel('Comparación', lastRangePrevStart, lastRangePrevEnd);
+      const previousLegendLabel = formatRangeLegendLabel('Año anterior', lastRangeYearStart, lastRangeYearEnd);
+
+document.getElementById('rangeChartsSubtle').textContent =
+  `Actual: ${lastRangeCurrentStart} a ${lastRangeCurrentEnd} · Año anterior: ${lastRangeYearStart} a ${lastRangeYearEnd}`;
 
       document.getElementById('rangeChartsSubtle').textContent = isYearCompare
         ? `Actual: ${lastRangeCurrentStart} a ${lastRangeCurrentEnd} · Año anterior: ${lastRangeYearStart} a ${lastRangeYearEnd}`
@@ -2424,13 +2425,10 @@
   toggleCompareCards(false);
   toggleYearCompareCards(lastYearCompareRows.length > 0);
 
-  // Mantener siempre gráficos visibles en rango
+  // Mantener gráficos visibles en rango y comparando contra año anterior
   if (lastYearCompareRows.length) {
     renderYearComparison(lastBaseRows, lastYearCompareRows);
     renderRangeCharts(lastBaseRows, lastYearCompareRows);
-  } else if (lastRangePrevRows.length) {
-    // fallback por si aún no cargó año anterior
-    renderRangeCharts(lastBaseRows, lastRangePrevRows);
   } else {
     hideRangeCharts();
   }
