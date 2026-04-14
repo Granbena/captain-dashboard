@@ -1088,6 +1088,7 @@
     const API_URL_DAILY = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read';
     const API_URL_LIVE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read-live';
     const API_URL_SYNC = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-sync';
+    const API_URL_HISTORY_COMPARE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-history-compare';
 
     let currentMode = 'today_live';
     let currentRows = [];
@@ -1095,16 +1096,21 @@
 
     let lastBaseRows = [];
     let lastCompareRows = [];
+    let lastYearCompareRows = [];
     let lastRangePrevRows = [];
     let lastPayload = null;
     let lastHourLabel = '-';
     let lastRequestMode = 'today_live';
     let lastCurrentDate = null;
     let lastCompareDate = null;
+    let lastYearCompareDate = null;
     let lastRangeCurrentStart = null;
     let lastRangeCurrentEnd = null;
     let lastRangePrevStart = null;
     let lastRangePrevEnd = null;
+    let lastRangeYearStart = null;
+    let lastRangeYearEnd = null;
+    let lastCutoffTime = null;
 
     let ordersChartInstance = null;
     let onTimeChartInstance = null;
@@ -1142,33 +1148,42 @@
 
     function setCompareTitles() {
       const isTodayMode = lastRequestMode === 'today_live' || currentMode === 'today_live';
-      document.getElementById('compareTitle').textContent = isTodayMode
-        ? 'Comparativo vs misma hora semana anterior'
-        : 'Comparativo vs periodo anterior';
+      const isSingleDayMode = lastRequestMode === 'single_day' || currentMode === 'single_day';
+      const isRangeMode = lastRequestMode === 'range' || currentMode === 'range';
 
-      document.querySelector('.compare-card:nth-child(1) .compare-title').textContent = isTodayMode
-        ? 'Órdenes vs misma hora semana anterior'
-        : 'Órdenes vs periodo anterior';
+      if (isTodayMode) {
+        document.getElementById('compareTitle').textContent = 'Comparativo vs misma hora semana anterior';
+        document.getElementById('compareTitleOrders').textContent = 'Órdenes vs misma hora semana anterior';
+        document.getElementById('compareTitleOnTime').textContent = 'OnTime vs misma hora semana anterior';
+        document.getElementById('compareTitleE2E').textContent = 'E2E vs misma hora semana anterior';
+        document.getElementById('compareTitlePick').textContent = 'Pick vs misma hora semana anterior';
 
-      document.querySelector('.compare-card:nth-child(2) .compare-title').textContent = isTodayMode
-        ? 'OnTime vs misma hora semana anterior'
-        : 'OnTime vs periodo anterior';
+        document.getElementById('compareYearTitle').textContent = 'Comparativo vs misma hora año anterior';
+        document.getElementById('compareYearTitleOrders').textContent = 'Órdenes vs misma hora año anterior';
+        document.getElementById('compareYearTitleOnTime').textContent = 'OnTime vs misma hora año anterior';
+        document.getElementById('compareYearTitleE2E').textContent = 'E2E vs misma hora año anterior';
+        document.getElementById('compareYearTitlePick').textContent = 'Pick vs misma hora año anterior';
+      } else if (isSingleDayMode || isRangeMode) {
+        document.getElementById('compareTitle').textContent = 'Comparativo vs periodo anterior';
+        document.getElementById('compareTitleOrders').textContent = 'Órdenes vs periodo anterior';
+        document.getElementById('compareTitleOnTime').textContent = 'OnTime vs periodo anterior';
+        document.getElementById('compareTitleE2E').textContent = 'E2E vs periodo anterior';
+        document.getElementById('compareTitlePick').textContent = 'Pick vs periodo anterior';
 
-      document.querySelector('.compare-card:nth-child(3) .compare-title').textContent = isTodayMode
-        ? 'E2E vs misma hora semana anterior'
-        : 'E2E vs periodo anterior';
-
-      document.querySelector('.compare-card:nth-child(4) .compare-title').textContent = isTodayMode
-        ? 'Pick vs misma hora semana anterior'
-        : 'Pick vs periodo anterior';
+        document.getElementById('compareYearTitle').textContent = 'Comparativo vs año anterior comparable';
+        document.getElementById('compareYearTitleOrders').textContent = 'Órdenes vs año anterior comparable';
+        document.getElementById('compareYearTitleOnTime').textContent = 'OnTime vs año anterior comparable';
+        document.getElementById('compareYearTitleE2E').textContent = 'E2E vs año anterior comparable';
+        document.getElementById('compareYearTitlePick').textContent = 'Pick vs año anterior comparable';
+      }
     }
 
     function updateCutoffBadge(requestMode) {
       const pill = document.getElementById('summaryCutoffPill');
       const value = document.getElementById('summaryCutoff');
 
-      if (requestMode === 'today_live') {
-        value.textContent = getChileNowTime();
+      if (requestMode === 'today_live' && lastCutoffTime) {
+        value.textContent = lastCutoffTime;
         pill.classList.remove('hidden');
       } else {
         value.textContent = '-';
@@ -1292,6 +1307,10 @@
       const date = new Date(Date.UTC(year, month - 1, day));
       date.setUTCDate(date.getUTCDate() + days);
       return date.toISOString().slice(0, 10);
+    }
+
+    function getSameWeekdayLastYear(dateStr) {
+      return shiftDate(dateStr, -364);
     }
 
     function formatNumber(value, decimals = 2) {
@@ -1960,10 +1979,14 @@
       const aligned = buildAlignedRangeSeries(currentRows, previousRows);
 
       const currentLegendLabel = formatRangeLegendLabel('Actual', lastRangeCurrentStart, lastRangeCurrentEnd);
-      const previousLegendLabel = formatRangeLegendLabel('Año anterior', lastRangeYearStart, lastRangeYearEnd);
+      const isYearCompare = !!(lastRangeYearStart && lastRangeYearEnd && previousRowsRaw === lastYearCompareRows);
+      const previousLegendLabel = isYearCompare
+        ? formatRangeLegendLabel('Año anterior', lastRangeYearStart, lastRangeYearEnd)
+        : formatRangeLegendLabel('Comparación', lastRangePrevStart, lastRangePrevEnd);
 
-      document.getElementById('rangeChartsSubtle').textContent =
-        `Actual: ${lastRangeCurrentStart} a ${lastRangeCurrentEnd} · Año anterior: ${lastRangeYearStart} a ${lastRangeYearEnd}`;
+      document.getElementById('rangeChartsSubtle').textContent = isYearCompare
+        ? `Actual: ${lastRangeCurrentStart} a ${lastRangeCurrentEnd} · Año anterior: ${lastRangeYearStart} a ${lastRangeYearEnd}`
+        : `Actual: ${lastRangeCurrentStart} a ${lastRangeCurrentEnd} · Comparación: ${lastRangePrevStart} a ${lastRangePrevEnd}`;
 
       destroyCharts();
 
@@ -2098,15 +2121,19 @@
       let syncDate = null;
       let currentDate = null;
       let compareDate = null;
+      let compareYearDate = null;
       let rangePrevStart = null;
       let rangePrevEnd = null;
+      let rangeYearStart = null;
+      let rangeYearEnd = null;
+      let cutoffTime = null;
 
       if (currentMode === 'today_live') {
         const today = todayChileIso();
-        const nowTime = getChileNowTime();
         syncDate = today;
         currentDate = today;
         compareDate = getSameDayLastWeek(today);
+        compareYearDate = getSameWeekdayLastYear(today);
 
         url = new URL(API_URL_LIVE);
         url.searchParams.set('business_date', today);
@@ -2114,12 +2141,15 @@
         if (hourBand === 'manual' && hourStartText && hourEndText) {
           addTimeParams(url, hourBand, hourStartText, hourEndText);
           hourLabel = getHourLabel(hourBand, hourStartText, hourEndText);
+          cutoffTime = hourEndText;
         } else if (hourBand !== 'all_day' && hourBand !== 'manual') {
           addTimeParams(url, hourBand, hourStartText, hourEndText);
           hourLabel = getHourLabel(hourBand, hourStartText, hourEndText);
+          cutoffTime = getBandRange(hourBand).end;
         } else {
+          cutoffTime = getChileNowTime();
           url.searchParams.set('time_start', '00:00');
-          url.searchParams.set('time_end', nowTime);
+          url.searchParams.set('time_end', cutoffTime);
           hourLabel = 'Todo el día';
         }
       } else if (currentMode === 'single_day') {
@@ -2139,7 +2169,16 @@
 
         currentDate = businessDate || null;
         compareDate = businessDate ? getSameDayLastWeek(businessDate) : null;
+        compareYearDate = businessDate ? getSameWeekdayLastYear(businessDate) : null;
         hourLabel = getHourLabel(hourBand, hourStartText, hourEndText);
+
+        if (hourBand === 'manual' && hourStartText && hourEndText) {
+          cutoffTime = hourEndText;
+        } else if (hourBand !== 'all_day' && hourBand !== 'manual') {
+          cutoffTime = getBandRange(hourBand).end;
+        } else {
+          cutoffTime = '23:59';
+        }
       } else {
         url = new URL(API_URL_DAILY);
 
@@ -2164,8 +2203,12 @@
         syncDate,
         currentDate,
         compareDate,
+        compareYearDate,
         rangePrevStart,
-        rangePrevEnd
+        rangePrevEnd,
+        rangeYearStart,
+        rangeYearEnd,
+        cutoffTime
       };
     }
 
@@ -2217,6 +2260,31 @@
       return payload;
     }
 
+    async function fetchHistoryCompareByDate(date, cutoffTime) {
+      const url = new URL(API_URL_HISTORY_COMPARE);
+      const storeFilter = document.getElementById('store_filter').value.trim();
+
+      url.searchParams.set('business_date', date);
+      url.searchParams.set('cutoff_time', cutoffTime);
+      if (storeFilter) {
+        url.searchParams.set('store_filter', storeFilter);
+      }
+      url.searchParams.set('_ts', Date.now().toString());
+
+      const res = await fetch(url.toString(), {
+        method: 'GET',
+        cache: 'no-store'
+      });
+
+      const payload = await res.json();
+
+      if (!res.ok || !payload.ok) {
+        throw new Error(payload?.error || 'Error leyendo histórico comparable');
+      }
+
+      return payload;
+    }
+
     async function fetchRangeByDates(dateStart, dateEnd) {
       const url = new URL(API_URL_DAILY);
       url.searchParams.set('date_start', dateStart);
@@ -2243,7 +2311,6 @@
       const tableSection = document.getElementById('tableSection');
 
       if (lastRequestMode === 'range') {
-        toggleCompareCards(false);
         tableSection.classList.add('hidden');
 
         const filteredRows = filterRowsByStore(lastBaseRows);
@@ -2251,10 +2318,14 @@
         updateCutoffBadge(lastRequestMode);
         setCompareTitles();
         renderHero(filteredRows);
-        renderRangeCharts(lastBaseRows, lastRangePrevRows);
+
+        const rangeCompareRows = lastYearCompareRows.length ? lastYearCompareRows : lastRangePrevRows;
+        renderRangeCharts(lastBaseRows, rangeCompareRows);
 
         currentRows = [];
         hideTableStatus();
+
+        updateCompareVisibility();
         return;
       }
 
@@ -2281,6 +2352,12 @@
       } else {
         clearCompareCards();
       }
+
+      if (lastYearCompareRows.length) {
+        renderComparison(lastBaseRows, lastYearCompareRows, 'Year');
+      }
+
+      updateCompareVisibility();
 
       const status = document.getElementById('status');
       status.textContent = `Carga exitosa. Registros: ${sortedRows.length}`;
@@ -2339,6 +2416,9 @@
         lastHourLabel = request.hourLabel;
         lastRequestMode = request.mode;
         lastCurrentDate = request.currentDate;
+        lastCompareDate = request.compareDate || null;
+        lastYearCompareDate = request.compareYearDate || null;
+        lastCutoffTime = request.cutoffTime || null;
 
         if (request.compareDate && request.mode !== 'range') {
           status.textContent = request.mode === 'today_live'
@@ -2349,10 +2429,10 @@
           let compareHourStart = hourStartText;
           let compareHourEnd = hourEndText;
 
-          if (request.mode === 'today_live' && hourBand === 'all_day') {
+          if (request.mode === 'today_live' && request.cutoffTime) {
             compareBand = 'manual';
             compareHourStart = '00:00';
-            compareHourEnd = getChileNowTime();
+            compareHourEnd = request.cutoffTime;
           }
 
           const comparePayload = await fetchSingleDayByDate(
@@ -2363,7 +2443,25 @@
           );
 
           lastCompareRows = normalizeRows(comparePayload);
-          lastCompareDate = request.compareDate;
+
+          if (
+            (request.mode === 'today_live' || request.mode === 'single_day') &&
+            request.compareYearDate &&
+            request.cutoffTime
+          ) {
+            status.textContent = request.mode === 'today_live'
+              ? 'Leyendo comparación a misma hora del año anterior...'
+              : 'Leyendo comparación del año anterior...';
+
+            const yearComparePayload = await fetchHistoryCompareByDate(
+              request.compareYearDate,
+              request.cutoffTime
+            );
+            lastYearCompareRows = normalizeRows(yearComparePayload);
+          } else {
+            lastYearCompareRows = [];
+          }
+
           lastRangePrevRows = [];
           lastRangeCurrentStart = null;
           lastRangeCurrentEnd = null;
@@ -2376,20 +2474,38 @@
 
           const rangePrevPayload = await fetchRangeByDates(request.rangePrevStart, request.rangePrevEnd);
           lastRangePrevRows = normalizeRows(rangePrevPayload);
+
+          if (request.rangeYearStart && request.rangeYearEnd) {
+            status.textContent = 'Leyendo comparación del año anterior...';
+            const rangeYearPayload = await fetchRangeByDates(request.rangeYearStart, request.rangeYearEnd);
+            lastYearCompareRows = normalizeRows(rangeYearPayload);
+          } else {
+            lastYearCompareRows = [];
+          }
+
           lastCompareRows = [];
           lastCompareDate = null;
+          lastYearCompareDate = null;
           lastRangeCurrentStart = payload.requested_date_start;
           lastRangeCurrentEnd = payload.requested_date_end;
           lastRangePrevStart = request.rangePrevStart;
           lastRangePrevEnd = request.rangePrevEnd;
+          lastRangeYearStart = request.rangeYearStart;
+          lastRangeYearEnd = request.rangeYearEnd;
+          lastCutoffTime = null;
         } else {
           lastCompareRows = [];
+          lastYearCompareRows = [];
           lastCompareDate = null;
+          lastYearCompareDate = null;
           lastRangePrevRows = [];
           lastRangeCurrentStart = null;
           lastRangeCurrentEnd = null;
           lastRangePrevStart = null;
           lastRangePrevEnd = null;
+          lastRangeYearStart = null;
+          lastRangeYearEnd = null;
+          lastCutoffTime = null;
         }
 
         applyCurrentView();
