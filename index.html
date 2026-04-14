@@ -2411,7 +2411,7 @@
 
       const tableSection = document.getElementById('tableSection');
 
-      if (lastRequestMode === 'range') {
+     if (lastRequestMode === 'range') {
   tableSection.classList.add('hidden');
 
   const filteredRows = filterRowsByStore(lastBaseRows);
@@ -2420,12 +2420,17 @@
   setCompareTitles();
   renderHero(filteredRows);
 
+  // En rango solo queremos año anterior
   toggleCompareCards(false);
   toggleYearCompareCards(lastYearCompareRows.length > 0);
 
+  // Mantener siempre gráficos visibles en rango
   if (lastYearCompareRows.length) {
     renderYearComparison(lastBaseRows, lastYearCompareRows);
     renderRangeCharts(lastBaseRows, lastYearCompareRows);
+  } else if (lastRangePrevRows.length) {
+    // fallback por si aún no cargó año anterior
+    renderRangeCharts(lastBaseRows, lastRangePrevRows);
   } else {
     hideRangeCharts();
   }
