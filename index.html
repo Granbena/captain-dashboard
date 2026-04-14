@@ -972,7 +972,7 @@
       </div>
     </div>
 
-    <div class="compare-grid">
+    <div class="compare-grid" id="comparePrimaryGrid">
       <div class="compare-card">
         <div class="compare-title" id="compareTitleOrders">Órdenes vs periodo anterior</div>
         <div class="compare-value compare-neutral" id="summaryOrdersVs">-</div>
@@ -1007,7 +1007,7 @@
       </div>
     </div>
 
-    <div class="compare-grid">
+    <div class="compare-grid" id="compareYearGrid">
       <div class="compare-card">
         <div class="compare-title" id="compareYearTitleOrders">Órdenes vs año anterior comparable</div>
         <div class="compare-value compare-neutral" id="summaryOrdersYearVs">-</div>
@@ -1262,8 +1262,15 @@
       const showPrimary = primaryAvailable && (compareView === 'primary' || compareView === 'both');
       const showYear = yearAvailable && (compareView === 'year' || compareView === 'both');
 
-      toggleCompareCards(showPrimary);
-      toggleYearCompareCards(showYear);
+      const primarySection = document.getElementById('compareSection');
+      const primaryGrid = document.getElementById('comparePrimaryGrid');
+      const yearSection = document.getElementById('compareYearSection');
+      const yearGrid = document.getElementById('compareYearGrid');
+
+      primarySection.classList.toggle('hidden', !(primaryAvailable || yearAvailable));
+      primaryGrid.classList.toggle('hidden', !showPrimary);
+      yearSection.classList.toggle('hidden', !showYear);
+      yearGrid.classList.toggle('hidden', !showYear);
 
       document.getElementById('compareViewPrimaryBtn').disabled = !primaryAvailable;
       document.getElementById('compareViewYearBtn').disabled = !yearAvailable;
@@ -1762,41 +1769,77 @@
       document.getElementById('summaryOnTime').textContent = stats.onTimeAvg !== null ? formatPercent(stats.onTimeAvg) : '-';
     }
 
-   function renderYearComparison(currentRowsInput, previousRowsInput) {
-  const currentRowsFiltered = filterRowsByStore(currentRowsInput);
-  const previousRowsFiltered = filterRowsByStore(previousRowsInput);
+    function renderComparison(currentRowsInput, previousRowsInput) {
+      const currentRowsFiltered = filterRowsByStore(currentRowsInput);
+      const previousRowsFiltered = filterRowsByStore(previousRowsInput);
 
-  const currentStats = getSummaryStats(currentRowsFiltered);
-  const previousStats = getSummaryStats(previousRowsFiltered);
+      const currentStats = getSummaryStats(currentRowsFiltered);
+      const previousStats = getSummaryStats(previousRowsFiltered);
 
-  setCompareCard(
-    'summaryOrdersYearVs',
-    formatDiffPercent(currentStats.totalOrders, previousStats.totalOrders, false),
-    'summaryOrdersYearVsLabel',
-    `${formatInteger(currentStats.totalOrders)} vs ${formatInteger(previousStats.totalOrders)}`
-  );
+      setCompareCard(
+        'summaryOrdersVs',
+        formatDiffPercent(currentStats.totalOrders, previousStats.totalOrders, false),
+        'summaryOrdersVsLabel',
+        `${formatInteger(currentStats.totalOrders)} vs ${formatInteger(previousStats.totalOrders)}`
+      );
 
-  setCompareCard(
-    'summaryOnTimeYearVs',
-    formatDiffPercent(currentStats.onTimeAvg, previousStats.onTimeAvg, false),
-    'summaryOnTimeYearVsLabel',
-    `${formatPercent(currentStats.onTimeAvg)} vs ${formatPercent(previousStats.onTimeAvg)}`
-  );
+      setCompareCard(
+        'summaryOnTimeVs',
+        formatDiffPercent(currentStats.onTimeAvg, previousStats.onTimeAvg, false),
+        'summaryOnTimeVsLabel',
+        `${formatPercent(currentStats.onTimeAvg)} vs ${formatPercent(previousStats.onTimeAvg)}`
+      );
 
-  setCompareCard(
-    'summaryE2EYearVs',
-    formatDiffMinutes(currentStats.e2eAvg, previousStats.e2eAvg, true),
-    'summaryE2EYearVsLabel',
-    `${formatNumberCompact(currentStats.e2eAvg)} min vs ${formatNumberCompact(previousStats.e2eAvg)} min`
-  );
+      setCompareCard(
+        'summaryE2EVs',
+        formatDiffMinutes(currentStats.e2eAvg, previousStats.e2eAvg, true),
+        'summaryE2EVsLabel',
+        `${formatNumberCompact(currentStats.e2eAvg)} min vs ${formatNumberCompact(previousStats.e2eAvg)} min`
+      );
 
-  setCompareCard(
-    'summaryPickYearVs',
-    formatDiffMinutes(currentStats.pickAvg, previousStats.pickAvg, true),
-    'summaryPickYearVsLabel',
-    `${formatNumberCompact(currentStats.pickAvg)} min vs ${formatNumberCompact(previousStats.pickAvg)} min`
-  );
-}
+      setCompareCard(
+        'summaryPickVs',
+        formatDiffMinutes(currentStats.pickAvg, previousStats.pickAvg, true),
+        'summaryPickVsLabel',
+        `${formatNumberCompact(currentStats.pickAvg)} min vs ${formatNumberCompact(previousStats.pickAvg)} min`
+      );
+    }
+
+    function renderYearComparison(currentRowsInput, previousRowsInput) {
+      const currentRowsFiltered = filterRowsByStore(currentRowsInput);
+      const previousRowsFiltered = filterRowsByStore(previousRowsInput);
+
+      const currentStats = getSummaryStats(currentRowsFiltered);
+      const previousStats = getSummaryStats(previousRowsFiltered);
+
+      setCompareCard(
+        'summaryOrdersYearVs',
+        formatDiffPercent(currentStats.totalOrders, previousStats.totalOrders, false),
+        'summaryOrdersYearVsLabel',
+        `${formatInteger(currentStats.totalOrders)} vs ${formatInteger(previousStats.totalOrders)}`
+      );
+
+      setCompareCard(
+        'summaryOnTimeYearVs',
+        formatDiffPercent(currentStats.onTimeAvg, previousStats.onTimeAvg, false),
+        'summaryOnTimeYearVsLabel',
+        `${formatPercent(currentStats.onTimeAvg)} vs ${formatPercent(previousStats.onTimeAvg)}`
+      );
+
+      setCompareCard(
+        'summaryE2EYearVs',
+        formatDiffMinutes(currentStats.e2eAvg, previousStats.e2eAvg, true),
+        'summaryE2EYearVsLabel',
+        `${formatNumberCompact(currentStats.e2eAvg)} min vs ${formatNumberCompact(previousStats.e2eAvg)} min`
+      );
+
+      setCompareCard(
+        'summaryPickYearVs',
+        formatDiffMinutes(currentStats.pickAvg, previousStats.pickAvg, true),
+        'summaryPickYearVsLabel',
+        `${formatNumberCompact(currentStats.pickAvg)} min vs ${formatNumberCompact(previousStats.pickAvg)} min`
+      );
+    }
 
     function destroyCharts() {
       if (ordersChartInstance) {
@@ -2306,36 +2349,34 @@
     }
 
     async function fetchHistoryCompareByDate(date, cutoffTime) {
-  const url = new URL(API_URL_HISTORY_COMPARE);
-  const storeFilter = document.getElementById('store_filter').value.trim();
+      const url = new URL(API_URL_HISTORY_COMPARE);
+      const storeFilter = document.getElementById('store_filter').value.trim();
 
-  const normalizedCutoff =
-    cutoffTime && cutoffTime.length === 5
-      ? `${cutoffTime}:00`
-      : cutoffTime;
+      const normalizedCutoff =
+        cutoffTime && cutoffTime.length === 5
+          ? `${cutoffTime}:00`
+          : cutoffTime;
 
-  url.searchParams.set('business_date', date);
-  url.searchParams.set('cutoff_time', normalizedCutoff);
+      url.searchParams.set('business_date', date);
+      url.searchParams.set('cutoff_time', normalizedCutoff);
+      if (storeFilter) {
+        url.searchParams.set('store_filter', storeFilter);
+      }
+      url.searchParams.set('_ts', Date.now().toString());
 
-  if (storeFilter) {
-    url.searchParams.set('store_filter', storeFilter);
-  }
+      const res = await fetch(url.toString(), {
+        method: 'GET',
+        cache: 'no-store'
+      });
 
-  url.searchParams.set('_ts', Date.now().toString());
+      const payload = await res.json();
 
-  const res = await fetch(url.toString(), {
-    method: 'GET',
-    cache: 'no-store'
-  });
+      if (!res.ok || !payload.ok) {
+        throw new Error(payload?.error || 'Error leyendo histórico comparable');
+      }
 
-  const payload = await res.json();
-
-  if (!res.ok || !payload.ok) {
-    throw new Error(payload?.error || 'Error leyendo histórico comparable');
-  }
-
-  return payload;
-}
+      return payload;
+    }
 
     async function fetchRangeByDates(dateStart, dateEnd) {
       const url = new URL(API_URL_DAILY);
@@ -2406,8 +2447,8 @@
       }
 
       if (lastYearCompareRows.length) {
-  renderYearComparison(lastBaseRows, lastYearCompareRows);
-}
+        renderYearComparison(lastBaseRows, lastYearCompareRows);
+      }
 
       updateCompareVisibility();
 
