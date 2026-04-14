@@ -204,7 +204,6 @@
     margin-bottom: 12px;
   }
 
-  /* Operación */
   .ops-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(140px, 1fr));
@@ -255,7 +254,6 @@
     color: var(--dark);
   }
 
-  /* Tiempos clave */
   .times-grid {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
@@ -320,7 +318,6 @@
     color: #000;
   }
 
-  /* Comparativos */
   .compare-wrap {
     background: var(--panel);
     border-radius: var(--radius);
@@ -962,31 +959,31 @@
   <div class="compare-wrap hidden" id="compareYearSection">
     <div class="charts-header">
       <div>
-        <div class="charts-title">Comparativo vs misma hora año anterior</div>
+        <div class="charts-title" id="compareYearTitle">Comparativo vs año anterior comparable</div>
       </div>
     </div>
 
     <div class="compare-grid">
       <div class="compare-card">
-        <div class="compare-title">Órdenes vs misma hora año anterior</div>
+        <div class="compare-title" id="compareYearTitleOrders">Órdenes vs año anterior comparable</div>
         <div class="compare-value compare-neutral" id="summaryOrdersYearVs">-</div>
         <div class="compare-subtle" id="summaryOrdersYearVsLabel">-</div>
       </div>
 
       <div class="compare-card">
-        <div class="compare-title">OnTime vs misma hora año anterior</div>
+        <div class="compare-title" id="compareYearTitleOnTime">OnTime vs año anterior comparable</div>
         <div class="compare-value compare-neutral" id="summaryOnTimeYearVs">-</div>
         <div class="compare-subtle" id="summaryOnTimeYearVsLabel">-</div>
       </div>
 
       <div class="compare-card">
-        <div class="compare-title">E2E vs misma hora año anterior</div>
+        <div class="compare-title" id="compareYearTitleE2E">E2E vs año anterior comparable</div>
         <div class="compare-value compare-neutral" id="summaryE2EYearVs">-</div>
         <div class="compare-subtle" id="summaryE2EYearVsLabel">-</div>
       </div>
 
       <div class="compare-card">
-        <div class="compare-title">Pick vs misma hora año anterior</div>
+        <div class="compare-title" id="compareYearTitlePick">Pick vs año anterior comparable</div>
         <div class="compare-value compare-neutral" id="summaryPickYearVs">-</div>
         <div class="compare-subtle" id="summaryPickYearVsLabel">-</div>
       </div>
@@ -1102,6 +1099,8 @@
     let lastRangeCurrentEnd = null;
     let lastRangePrevStart = null;
     let lastRangePrevEnd = null;
+    let lastRangeYearStart = null;
+    let lastRangeYearEnd = null;
     let lastCutoffTime = null;
 
     let ordersChartInstance = null;
@@ -1620,26 +1619,46 @@
 
     function setCompareTitles() {
       const isTodayMode = lastRequestMode === 'today_live' || currentMode === 'today_live';
+      const isSingleDayMode = lastRequestMode === 'single_day' || currentMode === 'single_day';
+      const isRangeMode = lastRequestMode === 'range' || currentMode === 'range';
 
-      document.getElementById('compareTitle').textContent = isTodayMode
-        ? 'Comparativo vs misma hora semana anterior'
-        : 'Comparativo vs periodo anterior';
+      if (isTodayMode) {
+        document.getElementById('compareTitle').textContent = 'Comparativo vs misma hora semana anterior';
+        document.getElementById('compareTitleOrders').textContent = 'Órdenes vs misma hora semana anterior';
+        document.getElementById('compareTitleOnTime').textContent = 'OnTime vs misma hora semana anterior';
+        document.getElementById('compareTitleE2E').textContent = 'E2E vs misma hora semana anterior';
+        document.getElementById('compareTitlePick').textContent = 'Pick vs misma hora semana anterior';
 
-      document.getElementById('compareTitleOrders').textContent = isTodayMode
-        ? 'Órdenes vs misma hora semana anterior'
-        : 'Órdenes vs periodo anterior';
+        document.getElementById('compareYearTitle').textContent = 'Comparativo vs misma hora año anterior';
+        document.getElementById('compareYearTitleOrders').textContent = 'Órdenes vs misma hora año anterior';
+        document.getElementById('compareYearTitleOnTime').textContent = 'OnTime vs misma hora año anterior';
+        document.getElementById('compareYearTitleE2E').textContent = 'E2E vs misma hora año anterior';
+        document.getElementById('compareYearTitlePick').textContent = 'Pick vs misma hora año anterior';
+      } else if (isSingleDayMode) {
+        document.getElementById('compareTitle').textContent = 'Comparativo vs periodo anterior';
+        document.getElementById('compareTitleOrders').textContent = 'Órdenes vs periodo anterior';
+        document.getElementById('compareTitleOnTime').textContent = 'OnTime vs periodo anterior';
+        document.getElementById('compareTitleE2E').textContent = 'E2E vs periodo anterior';
+        document.getElementById('compareTitlePick').textContent = 'Pick vs periodo anterior';
 
-      document.getElementById('compareTitleOnTime').textContent = isTodayMode
-        ? 'OnTime vs misma hora semana anterior'
-        : 'OnTime vs periodo anterior';
+        document.getElementById('compareYearTitle').textContent = 'Comparativo vs año anterior comparable';
+        document.getElementById('compareYearTitleOrders').textContent = 'Órdenes vs año anterior comparable';
+        document.getElementById('compareYearTitleOnTime').textContent = 'OnTime vs año anterior comparable';
+        document.getElementById('compareYearTitleE2E').textContent = 'E2E vs año anterior comparable';
+        document.getElementById('compareYearTitlePick').textContent = 'Pick vs año anterior comparable';
+      } else if (isRangeMode) {
+        document.getElementById('compareTitle').textContent = 'Comparativo vs periodo anterior';
+        document.getElementById('compareTitleOrders').textContent = 'Órdenes vs periodo anterior';
+        document.getElementById('compareTitleOnTime').textContent = 'OnTime vs periodo anterior';
+        document.getElementById('compareTitleE2E').textContent = 'E2E vs periodo anterior';
+        document.getElementById('compareTitlePick').textContent = 'Pick vs periodo anterior';
 
-      document.getElementById('compareTitleE2E').textContent = isTodayMode
-        ? 'E2E vs misma hora semana anterior'
-        : 'E2E vs periodo anterior';
-
-      document.getElementById('compareTitlePick').textContent = isTodayMode
-        ? 'Pick vs misma hora semana anterior'
-        : 'Pick vs periodo anterior';
+        document.getElementById('compareYearTitle').textContent = 'Comparativo vs año anterior comparable';
+        document.getElementById('compareYearTitleOrders').textContent = 'Órdenes vs año anterior comparable';
+        document.getElementById('compareYearTitleOnTime').textContent = 'OnTime vs año anterior comparable';
+        document.getElementById('compareYearTitleE2E').textContent = 'E2E vs año anterior comparable';
+        document.getElementById('compareYearTitlePick').textContent = 'Pick vs año anterior comparable';
+      }
     }
 
     function renderHero(rows) {
@@ -2069,6 +2088,8 @@
       let compareYearDate = null;
       let rangePrevStart = null;
       let rangePrevEnd = null;
+      let rangeYearStart = null;
+      let rangeYearEnd = null;
       let cutoffTime = null;
 
       if (currentMode === 'today_live') {
@@ -2112,7 +2133,16 @@
 
         currentDate = businessDate || null;
         compareDate = businessDate ? getSameDayLastWeek(businessDate) : null;
+        compareYearDate = businessDate ? getSameWeekdayLastYear(businessDate) : null;
         hourLabel = getHourLabel(hourBand, hourStartText, hourEndText);
+
+        if (hourBand === 'manual' && hourStartText && hourEndText) {
+          cutoffTime = hourEndText;
+        } else if (hourBand !== 'all_day' && hourBand !== 'manual') {
+          cutoffTime = getBandRange(hourBand).end;
+        } else {
+          cutoffTime = '23:59';
+        }
       } else {
         url = new URL(API_URL_DAILY);
 
@@ -2121,6 +2151,8 @@
           url.searchParams.set('date_end', dateEnd);
           rangePrevStart = shiftDate(dateStart, -7);
           rangePrevEnd = shiftDate(dateEnd, -7);
+          rangeYearStart = shiftDate(dateStart, -364);
+          rangeYearEnd = shiftDate(dateEnd, -364);
         }
 
         hourLabel = '-';
@@ -2136,9 +2168,11 @@
         currentDate,
         compareDate,
         compareYearDate,
-        cutoffTime,
         rangePrevStart,
-        rangePrevEnd
+        rangePrevEnd,
+        rangeYearStart,
+        rangeYearEnd,
+        cutoffTime
       };
     }
 
@@ -2242,7 +2276,6 @@
 
       if (lastRequestMode === 'range') {
         toggleCompareCards(false);
-        toggleYearCompareCards(false);
         tableSection.classList.add('hidden');
 
         const filteredRows = filterRowsByStore(lastBaseRows);
@@ -2254,6 +2287,14 @@
 
         currentRows = [];
         hideTableStatus();
+
+        if (lastYearCompareRows.length) {
+          toggleYearCompareCards(true);
+          renderComparison(lastBaseRows, lastYearCompareRows, 'Year');
+        } else {
+          toggleYearCompareCards(false);
+        }
+
         return;
       }
 
@@ -2281,7 +2322,7 @@
         clearCompareCards();
       }
 
-      if (lastRequestMode === 'today_live' && lastYearCompareRows.length) {
+      if ((lastRequestMode === 'today_live' || lastRequestMode === 'single_day') && lastYearCompareRows.length) {
         toggleYearCompareCards(true);
         renderComparison(lastBaseRows, lastYearCompareRows, 'Year');
       } else {
@@ -2373,8 +2414,15 @@
 
           lastCompareRows = normalizeRows(comparePayload);
 
-          if (request.mode === 'today_live' && request.compareYearDate && request.cutoffTime) {
-            status.textContent = 'Leyendo comparación a misma hora del año anterior...';
+          if (
+            (request.mode === 'today_live' || request.mode === 'single_day') &&
+            request.compareYearDate &&
+            request.cutoffTime
+          ) {
+            status.textContent = request.mode === 'today_live'
+              ? 'Leyendo comparación a misma hora del año anterior...'
+              : 'Leyendo comparación del año anterior...';
+
             const yearComparePayload = await fetchHistoryCompareByDate(
               request.compareYearDate,
               request.cutoffTime
@@ -2389,19 +2437,32 @@
           lastRangeCurrentEnd = null;
           lastRangePrevStart = null;
           lastRangePrevEnd = null;
+          lastRangeYearStart = null;
+          lastRangeYearEnd = null;
         } else if (request.mode === 'range' && request.rangePrevStart && request.rangePrevEnd) {
           status.textContent = 'Leyendo comparación del periodo anterior...';
 
           const rangePrevPayload = await fetchRangeByDates(request.rangePrevStart, request.rangePrevEnd);
           lastRangePrevRows = normalizeRows(rangePrevPayload);
+
+          if (request.rangeYearStart && request.rangeYearEnd) {
+            status.textContent = 'Leyendo comparación del año anterior...';
+            const rangeYearPayload = await fetchRangeByDates(request.rangeYearStart, request.rangeYearEnd);
+            lastYearCompareRows = normalizeRows(rangeYearPayload);
+          } else {
+            lastYearCompareRows = [];
+          }
+
           lastCompareRows = [];
-          lastYearCompareRows = [];
           lastCompareDate = null;
           lastYearCompareDate = null;
+
           lastRangeCurrentStart = payload.requested_date_start;
           lastRangeCurrentEnd = payload.requested_date_end;
           lastRangePrevStart = request.rangePrevStart;
           lastRangePrevEnd = request.rangePrevEnd;
+          lastRangeYearStart = request.rangeYearStart;
+          lastRangeYearEnd = request.rangeYearEnd;
           lastCutoffTime = null;
         } else {
           lastCompareRows = [];
@@ -2413,6 +2474,8 @@
           lastRangeCurrentEnd = null;
           lastRangePrevStart = null;
           lastRangePrevEnd = null;
+          lastRangeYearStart = null;
+          lastRangeYearEnd = null;
           lastCutoffTime = null;
         }
 
