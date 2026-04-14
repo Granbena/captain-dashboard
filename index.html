@@ -2065,86 +2065,102 @@
       };
     }
 
-    function renderRangeCharts(currentRowsRaw, previousRowsRaw) {
-      const section = document.getElementById('rangeChartsSection');
-      section.classList.remove('hidden');
+   function renderRangeCharts(currentRowsRaw, previousRowsRaw) {
+  const section = document.getElementById('rangeChartsSection');
+  section.classList.remove('hidden');
 
-      const currentRows = filterRowsByStore(currentRowsRaw);
-      const previousRows = filterRowsByStore(previousRowsRaw);
+  const currentRows = filterRowsByStore(currentRowsRaw);
+  const previousRows = filterRowsByStore(previousRowsRaw || []);
 
-      const aligned = buildAlignedRangeSeries(currentRows, previousRows);
+  if (!currentRows.length || !previousRows.length) {
+    destroyCharts();
+    document.getElementById('rangeChartsSubtle').textContent =
+      'Sin datos suficientes para graficar la comparación.';
+    return;
+  }
 
-      const currentLegendLabel = formatRangeLegendLabel('Actual', lastRangeCurrentStart, lastRangeCurrentEnd);
-      const isYearCompare = !!(lastRangeYearStart && lastRangeYearEnd && previousRowsRaw === lastYearCompareRows);
-      const previousLegendLabel = formatRangeLegendLabel('Año anterior', lastRangeYearStart, lastRangeYearEnd);
+  const aligned = buildAlignedRangeSeries(currentRows, previousRows);
 
-document.getElementById('rangeChartsSubtle').textContent =
-  `Actual: ${lastRangeCurrentStart} a ${lastRangeCurrentEnd} · Año anterior: ${lastRangeYearStart} a ${lastRangeYearEnd}`;
+  const usingYearComparison =
+    lastYearCompareRows.length > 0 &&
+    previousRowsRaw === lastYearCompareRows &&
+    lastRangeYearStart &&
+    lastRangeYearEnd;
 
-      document.getElementById('rangeChartsSubtle').textContent = isYearCompare
-        ? `Actual: ${lastRangeCurrentStart} a ${lastRangeCurrentEnd} · Año anterior: ${lastRangeYearStart} a ${lastRangeYearEnd}`
-        : `Actual: ${lastRangeCurrentStart} a ${lastRangeCurrentEnd} · Comparación: ${lastRangePrevStart} a ${lastRangePrevEnd}`;
+  const currentLegendLabel = formatRangeLegendLabel(
+    'Actual',
+    lastRangeCurrentStart,
+    lastRangeCurrentEnd
+  );
 
-      destroyCharts();
+  const previousLegendLabel = usingYearComparison
+    ? formatRangeLegendLabel('Año anterior', lastRangeYearStart, lastRangeYearEnd)
+    : formatRangeLegendLabel('Comparación', lastRangePrevStart, lastRangePrevEnd);
 
-      ordersChartInstance = new Chart(document.getElementById('ordersChart'), {
-        type: 'bar',
-        data: {
-          labels: aligned.labels,
-          datasets: [
-            {
-              label: currentLegendLabel,
-              data: aligned.currentOrders
-            },
-            {
-              label: previousLegendLabel,
-              data: aligned.previousOrders
-            }
-          ]
+  document.getElementById('rangeChartsSubtle').textContent = usingYearComparison
+    ? `Actual: ${lastRangeCurrentStart} a ${lastRangeCurrentEnd} · Año anterior: ${lastRangeYearStart} a ${lastRangeYearEnd}`
+    : `Actual: ${lastRangeCurrentStart} a ${lastRangeCurrentEnd} · Comparación: ${lastRangePrevStart} a ${lastRangePrevEnd}`;
+
+  destroyCharts();
+
+  ordersChartInstance = new Chart(document.getElementById('ordersChart'), {
+    type: 'bar',
+    data: {
+      labels: aligned.labels,
+      datasets: [
+        {
+          label: currentLegendLabel,
+          data: aligned.currentOrders
         },
-        options: buildSharedChartOptions('orders', aligned)
-      });
+        {
+          label: previousLegendLabel,
+          data: aligned.previousOrders
+        }
+      ]
+    },
+    options: buildSharedChartOptions('orders', aligned)
+  });
 
-      onTimeChartInstance = new Chart(document.getElementById('onTimeChart'), {
-        type: 'line',
-        data: {
-          labels: aligned.labels,
-          datasets: [
-            {
-              label: currentLegendLabel,
-              data: aligned.currentOnTime,
-              tension: 0.25
-            },
-            {
-              label: previousLegendLabel,
-              data: aligned.previousOnTime,
-              tension: 0.25
-            }
-          ]
+  onTimeChartInstance = new Chart(document.getElementById('onTimeChart'), {
+    type: 'line',
+    data: {
+      labels: aligned.labels,
+      datasets: [
+        {
+          label: currentLegendLabel,
+          data: aligned.currentOnTime,
+          tension: 0.25
         },
-        options: buildSharedChartOptions('on_time', aligned)
-      });
+        {
+          label: previousLegendLabel,
+          data: aligned.previousOnTime,
+          tension: 0.25
+        }
+      ]
+    },
+    options: buildSharedChartOptions('on_time', aligned)
+  });
 
-      e2eChartInstance = new Chart(document.getElementById('e2eChart'), {
-        type: 'line',
-        data: {
-          labels: aligned.labels,
-          datasets: [
-            {
-              label: currentLegendLabel,
-              data: aligned.currentE2E,
-              tension: 0.25
-            },
-            {
-              label: previousLegendLabel,
-              data: aligned.previousE2E,
-              tension: 0.25
-            }
-          ]
+  e2eChartInstance = new Chart(document.getElementById('e2eChart'), {
+    type: 'line',
+    data: {
+      labels: aligned.labels,
+      datasets: [
+        {
+          label: currentLegendLabel,
+          data: aligned.currentE2E,
+          tension: 0.25
         },
-        options: buildSharedChartOptions('e2e', aligned)
-      });
-    }
+        {
+          label: previousLegendLabel,
+          data: aligned.previousE2E,
+          tension: 0.25
+        }
+      ]
+    },
+    options: buildSharedChartOptions('e2e', aligned)
+  });
+}
 
     function hideRangeCharts() {
       document.getElementById('rangeChartsSection').classList.add('hidden');
@@ -2412,7 +2428,7 @@ document.getElementById('rangeChartsSubtle').textContent =
 
       const tableSection = document.getElementById('tableSection');
 
-     if (lastRequestMode === 'range') {
+  if (lastRequestMode === 'range') {
   tableSection.classList.add('hidden');
 
   const filteredRows = filterRowsByStore(lastBaseRows);
@@ -2421,16 +2437,24 @@ document.getElementById('rangeChartsSubtle').textContent =
   setCompareTitles();
   renderHero(filteredRows);
 
-  // En rango solo queremos año anterior
+  // En rango solo mostrar año anterior en cards
   toggleCompareCards(false);
   toggleYearCompareCards(lastYearCompareRows.length > 0);
 
-  // Mantener gráficos visibles en rango y comparando contra año anterior
   if (lastYearCompareRows.length) {
     renderYearComparison(lastBaseRows, lastYearCompareRows);
-    renderRangeCharts(lastBaseRows, lastYearCompareRows);
+  }
+
+  // Los gráficos deben quedar siempre visibles en rango
+  // Prioridad: año anterior; fallback: periodo anterior
+  const chartCompareRows = lastYearCompareRows.length
+    ? lastYearCompareRows
+    : lastRangePrevRows;
+
+  if (chartCompareRows.length) {
+    renderRangeCharts(lastBaseRows, chartCompareRows);
   } else {
-    hideRangeCharts();
+    document.getElementById('rangeChartsSection').classList.remove('hidden');
   }
 
   currentRows = [];
