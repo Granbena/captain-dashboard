@@ -2400,11 +2400,12 @@
           hourLabel = getHourLabel(hourBand, hourStartText, hourEndText);
           cutoffTime = getBandRange(hourBand).end;
         } else {
-          cutoffTime = getChileNowTime();
-          url.searchParams.set('time_start', '00:00');
-          url.searchParams.set('time_end', cutoffTime);
-          hourLabel = 'Todo el día';
-        }
+  const liveNowCutoff = getChileNowTime();
+  cutoffTime = '23:59:59';
+  url.searchParams.set('time_start', '00:00');
+  url.searchParams.set('time_end', liveNowCutoff);
+  hourLabel = 'Todo el día';
+}
       } else if (currentMode === 'single_day') {
         if (businessDate && isTodayChile(businessDate)) {
           url = new URL(API_URL_LIVE);
@@ -2743,7 +2744,9 @@
   request.cutoffTime
 );
 lastYearCompareRows = normalizeRows(yearComparePayload);
-console.log('lastYearCompareRows', lastYearCompareRows);
+console.log('today compareYearDate', request.compareYearDate);
+console.log('today cutoffTime', request.cutoffTime);
+console.log('today lastYearCompareRows', lastYearCompareRows);
           } else {
             lastYearCompareRows = [];
           }
