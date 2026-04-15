@@ -1344,8 +1344,8 @@
     }
 
     function getYearCompareAvailable() {
-      return lastYearCompareRows.length > 0;
-    }
+  return Array.isArray(lastYearCompareRows) && lastYearCompareRows.length > 0;
+}
 
     function updateCompareToggleLabels() {
       const isTodayMode = lastRequestMode === 'today_live' || currentMode === 'today_live';
@@ -1359,37 +1359,60 @@
     }
 
     function updateCompareToggleButtons() {
-      document.getElementById('compareViewPrimaryBtn').classList.toggle('active', compareView === 'primary');
-      document.getElementById('compareViewYearBtn').classList.toggle('active', compareView === 'year');
-      document.getElementById('compareViewBothBtn').classList.toggle('active', compareView === 'both');
-    }
+  const primaryBtn = document.getElementById('compareViewPrimaryBtn');
+  const yearBtn = document.getElementById('compareViewYearBtn');
+  const bothBtn = document.getElementById('compareViewBothBtn');
+
+  primaryBtn.classList.toggle('active', compareView === 'primary');
+  yearBtn.classList.toggle('active', compareView === 'year');
+  bothBtn.classList.toggle('active', compareView === 'both');
+}
 
     function updateCompareVisibility() {
-      const primaryAvailable = getPrimaryCompareAvailable();
-      const yearAvailable = getYearCompareAvailable();
+  const primaryAvailable = getPrimaryCompareAvailable();
+  const yearAvailable = getYearCompareAvailable();
 
-      const primaryBtn = document.getElementById('compareViewPrimaryBtn');
-      const bothBtn = document.getElementById('compareViewBothBtn');
+  const primaryBtn = document.getElementById('compareViewPrimaryBtn');
+  const yearBtn = document.getElementById('compareViewYearBtn');
+  const bothBtn = document.getElementById('compareViewBothBtn');
 
-      if (lastRequestMode === 'range') {
-        primaryBtn.classList.add('hidden');
-        bothBtn.classList.add('hidden');
-        compareView = 'year';
-      } else {
-        primaryBtn.classList.remove('hidden');
-        bothBtn.classList.remove('hidden');
-      }
+  if (lastRequestMode === 'range') {
+    primaryBtn.classList.add('hidden');
+    bothBtn.classList.add('hidden');
+    compareView = 'year';
+  } else {
+    primaryBtn.classList.remove('hidden');
+    bothBtn.classList.remove('hidden');
 
-      const showPrimary = primaryAvailable && (compareView === 'primary' || compareView === 'both');
-      const showYear = yearAvailable && (compareView === 'year' || compareView === 'both');
-
-      toggleCompareCards(showPrimary);
-      toggleYearCompareCards(showYear);
-
-      document.getElementById('compareViewPrimaryBtn').disabled = !primaryAvailable;
-      document.getElementById('compareViewYearBtn').disabled = !yearAvailable;
-      document.getElementById('compareViewBothBtn').disabled = !(primaryAvailable || yearAvailable);
+    if (compareView === 'year' && !yearAvailable && primaryAvailable) {
+      compareView = 'primary';
     }
+
+    if (compareView === 'primary' && !primaryAvailable && yearAvailable) {
+      compareView = 'year';
+    }
+
+    if (compareView === 'both' && !primaryAvailable && yearAvailable) {
+      compareView = 'year';
+    }
+
+    if (compareView === 'both' && primaryAvailable && !yearAvailable) {
+      compareView = 'primary';
+    }
+  }
+
+  const showPrimary = primaryAvailable && (compareView === 'primary' || compareView === 'both');
+  const showYear = yearAvailable && (compareView === 'year' || compareView === 'both');
+
+  toggleCompareCards(showPrimary);
+  toggleYearCompareCards(showYear);
+
+  primaryBtn.disabled = !primaryAvailable;
+  yearBtn.disabled = !yearAvailable;
+  bothBtn.disabled = !(primaryAvailable || yearAvailable);
+
+  updateCompareToggleButtons();
+}
 
     function setCompareView(view, { force = false } = {}) {
       if (!force && compareView === view) return;
@@ -2713,10 +2736,11 @@
               : 'Leyendo comparación del año anterior...';
 
             const yearComparePayload = await fetchHistoryCompareByDate(
-              request.compareYearDate,
-              request.cutoffTime
-            );
-            lastYearCompareRows = normalizeRows(yearComparePayload);
+  request.compareYearDate,
+  request.cutoffTime
+);
+lastYearCompareRows = normalizeRows(yearComparePayload);
+console.log('lastYearCompareRows', lastYearCompareRows);
           } else {
             lastYearCompareRows = [];
           }
