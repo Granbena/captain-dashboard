@@ -1372,15 +1372,18 @@
   const primaryAvailable = getPrimaryCompareAvailable();
   const yearAvailable = getYearCompareAvailable();
 
+  const compareSection = document.getElementById('compareSection');
   const primaryBtn = document.getElementById('compareViewPrimaryBtn');
   const yearBtn = document.getElementById('compareViewYearBtn');
   const bothBtn = document.getElementById('compareViewBothBtn');
 
   if (lastRequestMode === 'range') {
+    compareSection.classList.add('hidden');
     primaryBtn.classList.add('hidden');
     bothBtn.classList.add('hidden');
     compareView = 'year';
   } else {
+    compareSection.classList.remove('hidden');
     primaryBtn.classList.remove('hidden');
     bothBtn.classList.remove('hidden');
 
@@ -1866,8 +1869,8 @@
     }
 
     function toggleCompareCards(show) {
-      document.getElementById('compareSection').classList.toggle('hidden', !show);
-    }
+  document.getElementById('comparePrimaryGrid').classList.toggle('hidden', !show);
+}
 
     function toggleYearCompareCards(show) {
       const el = document.getElementById('compareYearSection');
