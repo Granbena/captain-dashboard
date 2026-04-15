@@ -1288,6 +1288,19 @@
       return formatter.format(now);
     }
 
+    function floorTimeTo15Minutes(timeText) {
+      if (!timeText) return '00:00';
+      const [hh, mm] = timeText.split(':').map(Number);
+      const flooredMinutes = Math.floor(mm / 15) * 15;
+      return `${String(hh).padStart(2, '0')}:${String(flooredMinutes).padStart(2, '0')}`;
+    }
+
+    function normalizeCompareCutoff(timeText) {
+      if (!timeText) return '00:00:00';
+      const floored = floorTimeTo15Minutes(timeText);
+      return `${floored}:00`;
+    }
+
     function setCompareTitles() {
       const isTodayMode = lastRequestMode === 'today_live' || currentMode === 'today_live';
       const isSingleDayMode = lastRequestMode === 'single_day' || currentMode === 'single_day';
@@ -1344,8 +1357,8 @@
     }
 
     function getYearCompareAvailable() {
-  return Array.isArray(lastYearCompareRows) && lastYearCompareRows.length > 0;
-}
+      return Array.isArray(lastYearCompareRows) && lastYearCompareRows.length > 0;
+    }
 
     function updateCompareToggleLabels() {
       const isTodayMode = lastRequestMode === 'today_live' || currentMode === 'today_live';
@@ -1359,63 +1372,63 @@
     }
 
     function updateCompareToggleButtons() {
-  const primaryBtn = document.getElementById('compareViewPrimaryBtn');
-  const yearBtn = document.getElementById('compareViewYearBtn');
-  const bothBtn = document.getElementById('compareViewBothBtn');
+      const primaryBtn = document.getElementById('compareViewPrimaryBtn');
+      const yearBtn = document.getElementById('compareViewYearBtn');
+      const bothBtn = document.getElementById('compareViewBothBtn');
 
-  primaryBtn.classList.toggle('active', compareView === 'primary');
-  yearBtn.classList.toggle('active', compareView === 'year');
-  bothBtn.classList.toggle('active', compareView === 'both');
-}
+      primaryBtn.classList.toggle('active', compareView === 'primary');
+      yearBtn.classList.toggle('active', compareView === 'year');
+      bothBtn.classList.toggle('active', compareView === 'both');
+    }
 
     function updateCompareVisibility() {
-  const primaryAvailable = getPrimaryCompareAvailable();
-  const yearAvailable = getYearCompareAvailable();
+      const primaryAvailable = getPrimaryCompareAvailable();
+      const yearAvailable = getYearCompareAvailable();
 
-  const compareSection = document.getElementById('compareSection');
-  const primaryBtn = document.getElementById('compareViewPrimaryBtn');
-  const yearBtn = document.getElementById('compareViewYearBtn');
-  const bothBtn = document.getElementById('compareViewBothBtn');
+      const compareSection = document.getElementById('compareSection');
+      const primaryBtn = document.getElementById('compareViewPrimaryBtn');
+      const yearBtn = document.getElementById('compareViewYearBtn');
+      const bothBtn = document.getElementById('compareViewBothBtn');
 
-  if (lastRequestMode === 'range') {
-    compareSection.classList.add('hidden');
-    primaryBtn.classList.add('hidden');
-    bothBtn.classList.add('hidden');
-    compareView = 'year';
-  } else {
-    compareSection.classList.remove('hidden');
-    primaryBtn.classList.remove('hidden');
-    bothBtn.classList.remove('hidden');
+      if (lastRequestMode === 'range') {
+        compareSection.classList.add('hidden');
+        primaryBtn.classList.add('hidden');
+        bothBtn.classList.add('hidden');
+        compareView = 'year';
+      } else {
+        compareSection.classList.remove('hidden');
+        primaryBtn.classList.remove('hidden');
+        bothBtn.classList.remove('hidden');
 
-    if (compareView === 'year' && !yearAvailable && primaryAvailable) {
-      compareView = 'primary';
+        if (compareView === 'year' && !yearAvailable && primaryAvailable) {
+          compareView = 'primary';
+        }
+
+        if (compareView === 'primary' && !primaryAvailable && yearAvailable) {
+          compareView = 'year';
+        }
+
+        if (compareView === 'both' && !primaryAvailable && yearAvailable) {
+          compareView = 'year';
+        }
+
+        if (compareView === 'both' && primaryAvailable && !yearAvailable) {
+          compareView = 'primary';
+        }
+      }
+
+      const showPrimary = primaryAvailable && (compareView === 'primary' || compareView === 'both');
+      const showYear = yearAvailable && (compareView === 'year' || compareView === 'both');
+
+      toggleCompareCards(showPrimary);
+      toggleYearCompareCards(showYear);
+
+      primaryBtn.disabled = !primaryAvailable;
+      yearBtn.disabled = !yearAvailable;
+      bothBtn.disabled = !(primaryAvailable || yearAvailable);
+
+      updateCompareToggleButtons();
     }
-
-    if (compareView === 'primary' && !primaryAvailable && yearAvailable) {
-      compareView = 'year';
-    }
-
-    if (compareView === 'both' && !primaryAvailable && yearAvailable) {
-      compareView = 'year';
-    }
-
-    if (compareView === 'both' && primaryAvailable && !yearAvailable) {
-      compareView = 'primary';
-    }
-  }
-
-  const showPrimary = primaryAvailable && (compareView === 'primary' || compareView === 'both');
-  const showYear = yearAvailable && (compareView === 'year' || compareView === 'both');
-
-  toggleCompareCards(showPrimary);
-  toggleYearCompareCards(showYear);
-
-  primaryBtn.disabled = !primaryAvailable;
-  yearBtn.disabled = !yearAvailable;
-  bothBtn.disabled = !(primaryAvailable || yearAvailable);
-
-  updateCompareToggleButtons();
-}
 
     function setCompareView(view, { force = false } = {}) {
       if (!force && compareView === view) return;
@@ -1869,8 +1882,8 @@
     }
 
     function toggleCompareCards(show) {
-  document.getElementById('comparePrimaryGrid').classList.toggle('hidden', !show);
-}
+      document.getElementById('comparePrimaryGrid').classList.toggle('hidden', !show);
+    }
 
     function toggleYearCompareCards(show) {
       const el = document.getElementById('compareYearSection');
@@ -2400,12 +2413,12 @@
           hourLabel = getHourLabel(hourBand, hourStartText, hourEndText);
           cutoffTime = getBandRange(hourBand).end;
         } else {
-  const liveNowCutoff = getChileNowTime();
-  cutoffTime = '23:59:59';
-  url.searchParams.set('time_start', '00:00');
-  url.searchParams.set('time_end', liveNowCutoff);
-  hourLabel = 'Todo el día';
-}
+          const liveNowCutoff = getChileNowTime();
+          cutoffTime = liveNowCutoff;
+          url.searchParams.set('time_start', '00:00');
+          url.searchParams.set('time_end', liveNowCutoff);
+          hourLabel = 'Todo el día';
+        }
       } else if (currentMode === 'single_day') {
         if (businessDate && isTodayChile(businessDate)) {
           url = new URL(API_URL_LIVE);
@@ -2739,14 +2752,17 @@
               ? 'Leyendo comparación a misma hora del año anterior...'
               : 'Leyendo comparación del año anterior...';
 
+            const compareCutoff =
+              request.mode === 'today_live'
+                ? normalizeCompareCutoff(request.cutoffTime)
+                : request.cutoffTime;
+
             const yearComparePayload = await fetchHistoryCompareByDate(
-  request.compareYearDate,
-  request.cutoffTime
-);
-lastYearCompareRows = normalizeRows(yearComparePayload);
-console.log('today compareYearDate', request.compareYearDate);
-console.log('today cutoffTime', request.cutoffTime);
-console.log('today lastYearCompareRows', lastYearCompareRows);
+              request.compareYearDate,
+              compareCutoff
+            );
+
+            lastYearCompareRows = normalizeRows(yearComparePayload);
           } else {
             lastYearCompareRows = [];
           }
