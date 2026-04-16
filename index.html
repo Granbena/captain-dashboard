@@ -628,6 +628,21 @@
     font-weight: 700;
   }
 
+  .turbo-btn {
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .turbo-btn.active {
+    background: #111827;
+    color: #ffffff;
+    border-color: #111827;
+  }
+
   @media (max-width: 1080px) {
     .hero-layout {
       grid-template-columns: 1fr;
@@ -976,6 +991,10 @@
           <div class="field" id="loadButtonField">
             <button id="loadBtn">Cargar dashboard</button>
           </div>
+
+          <div class="field hidden" id="turboButtonField">
+            <button id="turboBtn" class="turbo-btn" type="button">🚀 TURBO</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1260,6 +1279,11 @@
     let mobileFiltersOpen = false;
     let compareView = 'both';
     let currentSession = null;
+    let currentProfile = null;
+    let currentUserRole = null;
+    let turboMode = false;
+
+    const TURBO_STORES = ['ñuñoa', 'las condes', 'la dehesa'];
 
     function isMobileView() {
       return window.innerWidth <= 768;
@@ -1776,11 +1800,20 @@
     }
 
     function filterRowsByStore(rows) {
+      let filteredRows = [...rows];
+
+      if (turboMode) {
+        filteredRows = filteredRows.filter(row => {
+          const normalizedStore = (row.store_name || '').trim().toLowerCase();
+          return TURBO_STORES.includes(normalizedStore);
+        });
+      }
+
       const storeFilter = document.getElementById('store_filter').value.trim().toLowerCase();
 
-      if (!storeFilter) return rows;
+      if (!storeFilter) return filteredRows;
 
-      return rows.filter(row =>
+      return filteredRows.filter(row =>
         (row.store_name || '').toLowerCase().includes(storeFilter)
       );
     }
@@ -2827,6 +2860,59 @@
       }
     }
 
+    function canUseTurbo(role) {
+      return role === 'admin' || role === 'manager';
+    }
+
+    function updateTurboButtonVisibility() {
+      const turboField = document.getElementById('turboButtonField');
+      const turboBtn = document.getElementById('turboBtn');
+      const allowed = canUseTurbo(currentUserRole);
+
+      turboField.classList.toggle('hidden', !allowed);
+
+      if (!allowed) {
+        turboMode = false;
+      }
+
+      turboBtn.classList.toggle('active', turboMode);
+    }
+
+    async function fetchCurrentProfile() {
+      const { data: userData } = await supabaseClient.auth.getUser();
+      const user = userData.user;
+
+      if (!user) {
+        currentProfile = null;
+        currentUserRole = null;
+        return null;
+      }
+
+      const { data: profile, error } = await supabaseClient
+        .from('profiles')
+        .select('id, email, full_name, role, active')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error cargando profile:', error);
+        currentProfile = null;
+        currentUserRole = null;
+        return null;
+      }
+
+      currentProfile = profile || null;
+      currentUserRole = (profile?.role || '').toLowerCase() || null;
+      return currentProfile;
+    }
+
+    function toggleTurboMode() {
+      if (!canUseTurbo(currentUserRole)) return;
+      turboMode = !turboMode;
+      updateTurboButtonVisibility();
+      applyCurrentView();
+    }
+
     async function signIn() {
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
@@ -2855,6 +2941,10 @@
     async function signOut() {
       await supabaseClient.auth.signOut();
       currentSession = null;
+      currentProfile = null;
+      currentUserRole = null;
+      turboMode = false;
+      updateTurboButtonVisibility();
       document.getElementById('appView').style.display = 'none';
       document.getElementById('loginView').style.display = 'flex';
       document.getElementById('loginError').textContent = '';
@@ -2871,7 +2961,8 @@
         return;
       }
 
-      badge.textContent = user.email || 'Sesión activa';
+      const roleLabel = currentUserRole ? ` · ${currentUserRole}` : '';
+      badge.textContent = `${user.email || 'Sesión activa'}${roleLabel}`;
     }
 
     async function initApp() {
@@ -2879,10 +2970,18 @@
       currentSession = data.session || null;
 
       if (!currentSession) {
+        currentProfile = null;
+        currentUserRole = null;
+        turboMode = false;
+        updateTurboButtonVisibility();
         document.getElementById('loginView').style.display = 'flex';
         document.getElementById('appView').style.display = 'none';
         return;
       }
+
+      await fetchCurrentProfile();
+      turboMode = false;
+      updateTurboButtonVisibility();
 
       document.getElementById('loginView').style.display = 'none';
       document.getElementById('appView').style.display = 'block';
@@ -2946,6 +3045,7 @@
     document.getElementById('loadBtn').addEventListener('click', loadDashboard);
     document.getElementById('loginBtn').addEventListener('click', signIn);
     document.getElementById('logoutBtn').addEventListener('click', signOut);
+    document.getElementById('turboBtn').addEventListener('click', toggleTurboMode);
 
     document.getElementById('email').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') signIn();
