@@ -1807,16 +1807,7 @@
 
     function matchesTurboStore(row) {
       const storeUuid = String(row?.store_uuid || '').trim().toLowerCase();
-      if (storeUuid && TURBO_STORE_UUIDS.includes(storeUuid)) {
-        return true;
-      }
-
-      const normalizedName = normalizeStoreText(row?.store_name);
-      return (
-        normalizedName.includes('nunoa') ||
-        normalizedName.includes('las condes') ||
-        normalizedName.includes('la dehesa')
-      );
+      return !!storeUuid && TURBO_STORE_UUIDS.includes(storeUuid);
     }
 
     function filterRowsByStore(rows) {
