@@ -24,11 +24,40 @@
     box-sizing: border-box;
   }
 
+  html {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   body {
     font-family: Arial, sans-serif;
     margin: 24px;
     background: var(--bg);
     color: var(--text);
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  #appView {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .brand-block {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
   }
 
   h1 {
@@ -524,6 +553,14 @@
     font-weight: 700;
   }
 
+  .summary-good {
+    color: var(--green) !important;
+  }
+
+  .summary-bad {
+    color: var(--red) !important;
+  }
+
   .align-right {
     text-align: right;
   }
@@ -606,6 +643,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
   }
 
   .user-badge {
@@ -616,6 +654,10 @@
     border-radius: 999px;
     font-size: 13px;
     font-weight: 700;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .logout-btn {
@@ -657,18 +699,35 @@
   @media (max-width: 768px) {
     body {
       font-size: 14px;
-      margin: 12px;
+      margin: 8px;
     }
 
-    header {
-      padding: 10px 14px !important;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
-      gap: 10px;
+    #appView {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    .app-header {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      padding: 10px 8px !important;
+      margin-bottom: 10px;
+      gap: 12px !important;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .brand-block {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
     }
 
     header img {
       height: 32px !important;
+      flex: 0 0 auto;
     }
 
     header span,
@@ -678,7 +737,74 @@
 
     .header-right {
       width: 100%;
-      justify-content: space-between;
+      max-width: 100%;
+      min-width: 0;
+      margin-left: 0 !important;
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) 82px;
+      gap: 8px !important;
+      align-items: stretch;
+    }
+
+    .header-right.has-turbo {
+      grid-template-columns: 92px minmax(0, 1fr) 82px;
+    }
+
+    .header-right.has-turbo .turbo-btn {
+      grid-column: 1;
+    }
+
+    .header-right.has-turbo .user-badge {
+      grid-column: 2;
+    }
+
+    .header-right.has-turbo .logout-btn {
+      grid-column: 3;
+    }
+
+    .header-right:not(.has-turbo) .user-badge {
+      grid-column: 1;
+    }
+
+    .header-right:not(.has-turbo) .logout-btn {
+      grid-column: 2;
+    }
+
+    .header-right > * {
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
+    .user-badge,
+    .turbo-btn,
+    .logout-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      white-space: normal;
+      line-height: 1.15;
+    }
+
+    .user-badge {
+      border-radius: 18px;
+      padding: 9px 8px;
+    }
+
+    .turbo-btn,
+    .logout-btn {
+      padding: 9px 8px;
+      border-radius: 12px;
+    }
+
+    .panel,
+    .filters,
+    .compare-wrap,
+    .charts-wrap,
+    .table-wrap {
+      width: 100%;
+      max-width: 100%;
     }
 
     h1 {
@@ -916,8 +1042,8 @@
   </div>
 
   <div id="appView" style="display:none;">
-    <header style="display:flex; align-items:center; padding:10px 20px;">
-      <div style="display:flex; align-items:center; gap:12px;">
+    <header class="app-header" style="display:flex; align-items:center; padding:10px 20px;">
+      <div class="brand-block" style="display:flex; align-items:center; gap:12px;">
         <img src="./assets/melt-logo.png" alt="Melt Logo" style="height: 36px;" />
         <span style="font-size: 16px; font-weight: 600; color: #1f2937;">
           Control Tower
@@ -1949,6 +2075,20 @@
       document.getElementById('summaryStores').textContent = countUniqueStores(rows);
     }
 
+    function setSummaryThresholdClass(elementId, value, isGoodFn) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+
+      el.classList.remove('summary-good', 'summary-bad');
+
+      if (value === null || value === undefined || value === '') return;
+
+      const num = Number(value);
+      if (Number.isNaN(num)) return;
+
+      el.classList.add(isGoodFn(num) ? 'summary-good' : 'summary-bad');
+    }
+
     function renderHero(rows) {
       const stats = getSummaryStats(rows);
 
@@ -1962,6 +2102,9 @@
       document.getElementById('summaryE2E').textContent = stats.e2eAvg !== null ? formatNumber(stats.e2eAvg, 1) : '-';
       document.getElementById('summaryPromise').textContent = stats.promiseAvg !== null ? formatNumber(stats.promiseAvg, 1) : '-';
       document.getElementById('summaryOnTime').textContent = stats.onTimeAvg !== null ? formatPercent(stats.onTimeAvg) : '-';
+
+      setSummaryThresholdClass('summaryE2E', stats.e2eAvg, value => value <= 41);
+      setSummaryThresholdClass('summaryOnTime', stats.onTimeAvg, value => value >= 90.5);
     }
 
     function renderComparison(currentRowsInput, previousRowsInput) {
@@ -2901,8 +3044,10 @@
 
     function updateTurboButtonVisibility() {
       const btn = document.getElementById('turboBtn');
+      const headerRight = document.querySelector('.header-right');
       const allowed = userCanUseTurbo();
       btn.classList.toggle('hidden', !allowed);
+      if (headerRight) headerRight.classList.toggle('has-turbo', allowed);
 
       if (!allowed) {
         turboMode = false;
