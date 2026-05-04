@@ -468,7 +468,7 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 1020px;
+    min-width: 1140px;
   }
 
   th, td {
@@ -559,6 +559,124 @@
 
   .summary-bad {
     color: var(--red) !important;
+  }
+
+
+  .active-orders-card {
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease, background-color 0.12s ease;
+  }
+
+  .active-orders-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+  }
+
+  .active-orders-card:focus-visible {
+    outline: 3px solid rgba(17, 24, 39, 0.22);
+    outline-offset: 2px;
+  }
+
+  .active-orders-card.active-risk-green {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+  }
+
+  .active-orders-card.active-risk-yellow {
+    border-color: #fde68a;
+    background: #fffbeb;
+  }
+
+  .active-orders-card.active-risk-red {
+    border-color: #fecaca;
+    background: #fef2f2;
+  }
+
+  .active-subtext {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.3;
+    font-weight: 800;
+    color: var(--muted);
+  }
+
+  .active-subtext.active-risk-green {
+    color: var(--green);
+  }
+
+  .active-subtext.active-risk-yellow {
+    color: var(--yellow);
+  }
+
+  .active-subtext.active-risk-red {
+    color: var(--red);
+  }
+
+  .active-panel {
+    background: var(--panel);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+  }
+
+  .active-panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .active-panel-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .active-panel-subtle {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+
+  .active-panel-close {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 800;
+    flex: 0 0 auto;
+  }
+
+  .active-orders-table {
+    width: 100%;
+    min-width: 880px;
+  }
+
+  .order-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .active-risk-text-green {
+    color: var(--green);
+    font-weight: 800;
+  }
+
+  .active-risk-text-yellow {
+    color: var(--yellow);
+    font-weight: 800;
+  }
+
+  .active-risk-text-red {
+    color: var(--red);
+    font-weight: 800;
   }
 
   .align-right {
@@ -1015,7 +1133,25 @@
     }
 
     table {
-      min-width: 720px;
+      min-width: 860px;
+    }
+
+    .active-panel {
+      padding: 12px !important;
+      border-radius: 18px !important;
+    }
+
+    .active-panel-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .active-panel-close {
+      width: 100%;
+    }
+
+    .active-orders-table {
+      min-width: 780px;
     }
   }
 </style>
@@ -1181,9 +1317,10 @@
               <div class="kpi-value" id="summaryDeliveries">0</div>
             </div>
 
-            <div class="kpi-card">
+            <div class="kpi-card active-orders-card" id="activeOrdersCard" role="button" tabindex="0" title="Ver órdenes activas más atrasadas">
               <div class="kpi-title">Activas</div>
               <div class="kpi-value-small" id="summaryActive">0</div>
+              <div class="active-subtext" id="summaryActiveOldest">Más antigua: -</div>
             </div>
 
             <div class="kpi-card">
@@ -1197,6 +1334,33 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div class="active-panel hidden" id="activeOrdersPanel">
+      <div class="active-panel-header">
+        <div>
+          <div class="active-panel-title">Órdenes activas más atrasadas</div>
+          <div class="active-panel-subtle" id="activeOrdersPanelSubtle">Top 10 ordenadas por mayor riesgo operacional.</div>
+        </div>
+        <button type="button" class="active-panel-close" id="activeOrdersPanelClose">Cerrar</button>
+      </div>
+
+      <div class="table-scroll">
+        <table class="active-orders-table">
+          <thead>
+            <tr>
+              <th>Orden</th>
+              <th>Tienda</th>
+              <th>Estado</th>
+              <th class="align-right">Min activa</th>
+              <th class="align-right">Promesa</th>
+              <th>Situación</th>
+              <th>Creada</th>
+            </tr>
+          </thead>
+          <tbody id="activeOrdersBody"></tbody>
+        </table>
       </div>
     </div>
 
@@ -1339,6 +1503,9 @@
               <th class="sortable align-right" data-sort-key="active_orders">
                 <span class="sort-label">Activas <span class="sort-arrow" data-arrow-for="active_orders"></span></span>
               </th>
+              <th class="sortable align-right" data-sort-key="oldest_active_minutes">
+                <span class="sort-label">Activa más antigua <span class="sort-arrow" data-arrow-for="oldest_active_minutes"></span></span>
+              </th>
               <th class="sortable align-right" data-sort-key="pick_minutes">
                 <span class="sort-label">Pick <span class="sort-arrow" data-arrow-for="pick_minutes"></span></span>
               </th>
@@ -1395,6 +1562,9 @@
     let lastRangeYearStart = null;
     let lastRangeYearEnd = null;
     let lastCutoffTime = null;
+    let lastActiveOrdersDetail = [];
+    let lastActiveOrdersSummary = null;
+    let activeOrdersPanelOpen = false;
 
     let ordersChartInstance = null;
     let onTimeChartInstance = null;
@@ -1813,7 +1983,11 @@
             delivery_minutes: row.trip_minutes ?? null,
             e2e_minutes: row.delivery_minutes ?? null,
             promise_minutes: row.promise_minutes ?? null,
-            on_time_pct: row.on_time_pct ?? null
+            on_time_pct: row.on_time_pct ?? null,
+            oldest_active_minutes: row.oldest_active_minutes ?? null,
+            oldest_active_order_uuid: row.oldest_active_order_uuid ?? null,
+            oldest_active_promise_delta_minutes: row.oldest_active_promise_delta_minutes ?? null,
+            oldest_active_status: row.oldest_active_status ?? null
           };
         }
 
@@ -1830,7 +2004,11 @@
           delivery_minutes: row.delivery_minutes ?? null,
           e2e_minutes: row.e2e_minutes ?? null,
           promise_minutes: row.promise_minutes ?? null,
-          on_time_pct: row.on_time_pct ?? null
+          on_time_pct: row.on_time_pct ?? null,
+          oldest_active_minutes: row.oldest_active_minutes ?? null,
+          oldest_active_order_uuid: row.oldest_active_order_uuid ?? null,
+          oldest_active_promise_delta_minutes: row.oldest_active_promise_delta_minutes ?? null,
+          oldest_active_status: row.oldest_active_status ?? null
         };
       });
     }
@@ -1951,6 +2129,242 @@
       return filteredRows.filter(row =>
         normalizeStoreText(row.store_name).includes(normalizedFilter)
       );
+    }
+
+    function getActiveRiskLevel(value) {
+      const num = Number(value);
+      if (Number.isNaN(num)) return 'neutral';
+      if (num >= 41) return 'red';
+      if (num >= 31) return 'yellow';
+      return 'green';
+    }
+
+    function getActiveAgeClass(value) {
+      const level = getActiveRiskLevel(value);
+      if (level === 'red') return 'metric-red';
+      if (level === 'yellow') return 'metric-yellow';
+      if (level === 'green') return 'metric-green';
+      return '';
+    }
+
+    function formatActiveMinutes(value) {
+      if (value === null || value === undefined || value === '') return '-';
+      const num = Number(value);
+      if (Number.isNaN(num)) return '-';
+      return `${Math.round(num)} min`;
+    }
+
+    function filterActiveOrdersDetail(orders = lastActiveOrdersDetail) {
+      const storeFilter = document.getElementById('store_filter').value.trim();
+      let filteredOrders = Array.isArray(orders) ? [...orders] : [];
+
+      if (turboMode) {
+        filteredOrders = filteredOrders.filter(order => matchesTurboStore(order));
+      }
+
+      if (!storeFilter) return filteredOrders;
+
+      const normalizedFilter = normalizeStoreText(storeFilter);
+      return filteredOrders.filter(order =>
+        normalizeStoreText(order.store_name).includes(normalizedFilter)
+      );
+    }
+
+    function sortActiveOrdersForDisplay(orders) {
+      return [...orders].sort((a, b) => {
+        const aDelta = a.promise_delta_minutes === null || a.promise_delta_minutes === undefined
+          ? Number.POSITIVE_INFINITY
+          : Number(a.promise_delta_minutes);
+        const bDelta = b.promise_delta_minutes === null || b.promise_delta_minutes === undefined
+          ? Number.POSITIVE_INFINITY
+          : Number(b.promise_delta_minutes);
+
+        if (aDelta !== bDelta) return aDelta - bDelta;
+
+        const aMinutes = Number(a.active_minutes);
+        const bMinutes = Number(b.active_minutes);
+        return (Number.isNaN(bMinutes) ? -1 : bMinutes) - (Number.isNaN(aMinutes) ? -1 : aMinutes);
+      });
+    }
+
+    function getOldestActiveFromRows(rows) {
+      const candidates = rows
+        .filter(row => row.oldest_active_minutes !== null && row.oldest_active_minutes !== undefined)
+        .map(row => ({
+          active_minutes: Number(row.oldest_active_minutes),
+          store_name: row.store_name,
+          order_uuid: row.oldest_active_order_uuid,
+          promise_delta_minutes: row.oldest_active_promise_delta_minutes,
+          delivery_status: row.oldest_active_status
+        }))
+        .filter(item => !Number.isNaN(item.active_minutes));
+
+      if (!candidates.length) return null;
+      return candidates.sort((a, b) => b.active_minutes - a.active_minutes)[0];
+    }
+
+    function getActiveSummaryForCurrentFilter(rows) {
+      const activeDetails = filterActiveOrdersDetail(lastActiveOrdersDetail);
+
+      if (activeDetails.length) {
+        const oldest = [...activeDetails]
+          .filter(order => order.active_minutes !== null && order.active_minutes !== undefined)
+          .sort((a, b) => Number(b.active_minutes) - Number(a.active_minutes))[0] || null;
+
+        return {
+          details: sortActiveOrdersForDisplay(activeDetails),
+          oldest
+        };
+      }
+
+      return {
+        details: [],
+        oldest: getOldestActiveFromRows(rows)
+      };
+    }
+
+    function formatOrderCode(orderUuid) {
+      if (!orderUuid) return '-';
+      const value = String(orderUuid);
+      if (value.length <= 12) return value;
+      return `${value.slice(0, 8)}…`;
+    }
+
+    function formatDeliveryStatus(status) {
+      const normalized = String(status || '').trim().toLowerCase();
+      const labels = {
+        assigned_and_accepted_by_driver: 'Repartidor aceptó',
+        assigned_to_driver: 'Asignada a repartidor',
+        collected: 'Retirada',
+        cancelled: 'Cancelada',
+        completed: 'Entregada',
+        dropped_off: 'Entregada',
+        unassigned_to_driver: 'Sin repartidor'
+      };
+      return labels[normalized] || status || '-';
+    }
+
+    function formatChileTime(value) {
+      if (!value) return '-';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '-';
+      return new Intl.DateTimeFormat('es-CL', {
+        timeZone: 'America/Santiago',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).format(date);
+    }
+
+    function formatCreatedTime(order) {
+      const createdMinute = Number(order?.created_minute_of_day);
+      if (!Number.isNaN(createdMinute)) {
+        const hours = Math.floor(createdMinute / 60);
+        const minutes = createdMinute % 60;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      }
+
+      return formatChileTime(order?.created_at);
+    }
+
+    function formatPromiseDelta(value) {
+      if (value === null || value === undefined || value === '') return '-';
+      const num = Number(value);
+      if (Number.isNaN(num)) return '-';
+      if (num < 0) return `Atrasada ${Math.abs(Math.round(num))} min`;
+      if (num === 0) return 'Al límite';
+      return `Faltan ${Math.round(num)} min`;
+    }
+
+    function getPromiseDeltaClass(value) {
+      if (value === null || value === undefined || value === '') return '';
+      const num = Number(value);
+      if (Number.isNaN(num)) return '';
+      if (num < 0) return 'active-risk-text-red';
+      if (num <= 10) return 'active-risk-text-yellow';
+      return 'active-risk-text-green';
+    }
+
+    function updateActiveOrdersCard(rows) {
+      const card = document.getElementById('activeOrdersCard');
+      const subtext = document.getElementById('summaryActiveOldest');
+      if (!card || !subtext) return;
+
+      card.classList.remove('active-risk-green', 'active-risk-yellow', 'active-risk-red');
+      subtext.classList.remove('active-risk-green', 'active-risk-yellow', 'active-risk-red');
+
+      const { oldest } = getActiveSummaryForCurrentFilter(rows);
+
+      if (!oldest || oldest.active_minutes === null || oldest.active_minutes === undefined) {
+        subtext.textContent = 'Más antigua: -';
+        return;
+      }
+
+      const level = getActiveRiskLevel(oldest.active_minutes);
+      const storeName = oldest.store_name || '-';
+      subtext.textContent = `Más antigua: ${formatActiveMinutes(oldest.active_minutes)} · ${storeName}`;
+
+      if (level !== 'neutral') {
+        card.classList.add(`active-risk-${level}`);
+        subtext.classList.add(`active-risk-${level}`);
+      }
+    }
+
+    function renderActiveOrdersPanel() {
+      const tbody = document.getElementById('activeOrdersBody');
+      const subtle = document.getElementById('activeOrdersPanelSubtle');
+      if (!tbody || !subtle) return;
+
+      const sortedOrders = sortActiveOrdersForDisplay(filterActiveOrdersDetail(lastActiveOrdersDetail));
+      const topOrders = sortedOrders.slice(0, 10);
+
+      subtle.textContent = sortedOrders.length
+        ? `Mostrando ${topOrders.length} de ${sortedOrders.length} órdenes activas. Ordenadas por promesa más crítica y minutos activos.`
+        : 'No hay detalle de órdenes activas para el filtro actual.';
+
+      if (!topOrders.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7">Sin órdenes activas para mostrar.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = topOrders.map(order => {
+        const activeClass = getActiveAgeClass(order.active_minutes);
+        const promiseClass = getPromiseDeltaClass(order.promise_delta_minutes);
+        return `
+          <tr>
+            <td><span class="order-code" title="${order.order_uuid || ''}">${formatOrderCode(order.order_uuid)}</span></td>
+            <td>${order.store_name || '-'}</td>
+            <td>${formatDeliveryStatus(order.delivery_status)}</td>
+            <td class="align-right ${activeClass}">${formatActiveMinutes(order.active_minutes)}</td>
+            <td class="align-right">${formatActiveMinutes(order.promise_minutes)}</td>
+            <td class="${promiseClass}">${formatPromiseDelta(order.promise_delta_minutes)}</td>
+            <td>${formatCreatedTime(order)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openActiveOrdersPanel() {
+      activeOrdersPanelOpen = true;
+      renderActiveOrdersPanel();
+      document.getElementById('activeOrdersPanel').classList.remove('hidden');
+    }
+
+    function closeActiveOrdersPanel() {
+      activeOrdersPanelOpen = false;
+      document.getElementById('activeOrdersPanel').classList.add('hidden');
+    }
+
+    function toggleActiveOrdersPanel() {
+      if (activeOrdersPanelOpen) {
+        closeActiveOrdersPanel();
+      } else {
+        openActiveOrdersPanel();
+      }
     }
 
     function countUniqueStores(rows) {
@@ -2105,6 +2519,11 @@
 
       setSummaryThresholdClass('summaryE2E', stats.e2eAvg, value => value <= 41);
       setSummaryThresholdClass('summaryOnTime', stats.onTimeAvg, value => value >= 90.5);
+      updateActiveOrdersCard(rows);
+
+      if (activeOrdersPanelOpen) {
+        renderActiveOrdersPanel();
+      }
     }
 
     function renderComparison(currentRowsInput, previousRowsInput) {
@@ -2504,7 +2923,7 @@
       if (!rows.length) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="9">Sin datos para el filtro seleccionado.</td>
+            <td colspan="10">Sin datos para el filtro seleccionado.</td>
           </tr>
         `;
         return;
@@ -2517,12 +2936,14 @@
         const pickClass = getPickClass(row.pick_minutes);
         const deliveryClass = getDeliveryClass(row.delivery_minutes);
         const e2eClass = getE2EClass(row.e2e_minutes);
+        const oldestActiveClass = getActiveAgeClass(row.oldest_active_minutes);
 
         tr.innerHTML = `
           <td>${row.store_name || '-'}</td>
           <td class="align-right">${row.orders_total ?? 0}</td>
           <td class="align-right">${row.delivered_orders ?? row.deliveries_total ?? 0}</td>
           <td class="align-right">${row.active_orders ?? 0}</td>
+          <td class="align-right ${oldestActiveClass}">${formatActiveMinutes(row.oldest_active_minutes)}</td>
           <td class="align-right ${pickClass}">${formatNumber(row.pick_minutes)}</td>
           <td class="align-right ${deliveryClass}">${formatNumber(row.delivery_minutes)}</td>
           <td class="align-right ${e2eClass}">${formatNumber(row.e2e_minutes)}</td>
@@ -2896,6 +3317,8 @@
         const normalizedRows = normalizeRows(payload);
 
         lastBaseRows = normalizedRows;
+        lastActiveOrdersDetail = Array.isArray(payload.active_orders_detail) ? payload.active_orders_detail : [];
+        lastActiveOrdersSummary = payload.active_orders_summary || null;
         lastPayload = payload;
         lastHourLabel = request.hourLabel;
         lastRequestMode = request.mode;
@@ -3192,6 +3615,14 @@
     document.getElementById('loginBtn').addEventListener('click', signIn);
     document.getElementById('logoutBtn').addEventListener('click', signOut);
     document.getElementById('turboBtn').addEventListener('click', toggleTurboMode);
+    document.getElementById('activeOrdersCard').addEventListener('click', toggleActiveOrdersPanel);
+    document.getElementById('activeOrdersCard').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleActiveOrdersPanel();
+      }
+    });
+    document.getElementById('activeOrdersPanelClose').addEventListener('click', closeActiveOrdersPanel);
 
     document.getElementById('email').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') signIn();
