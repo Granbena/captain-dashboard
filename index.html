@@ -1986,6 +1986,7 @@
             on_time_pct: row.on_time_pct ?? null,
             oldest_active_minutes: row.oldest_active_minutes ?? null,
             oldest_active_order_uuid: row.oldest_active_order_uuid ?? null,
+            oldest_active_partner_internal_order_id: row.oldest_active_partner_internal_order_id ?? null,
             oldest_active_promise_delta_minutes: row.oldest_active_promise_delta_minutes ?? null,
             oldest_active_status: row.oldest_active_status ?? null
           };
@@ -2007,6 +2008,7 @@
           on_time_pct: row.on_time_pct ?? null,
           oldest_active_minutes: row.oldest_active_minutes ?? null,
           oldest_active_order_uuid: row.oldest_active_order_uuid ?? null,
+          oldest_active_partner_internal_order_id: row.oldest_active_partner_internal_order_id ?? null,
           oldest_active_promise_delta_minutes: row.oldest_active_promise_delta_minutes ?? null,
           oldest_active_status: row.oldest_active_status ?? null
         };
@@ -2109,6 +2111,14 @@
         .trim();
     }
 
+    function formatStoreName(storeName) {
+      const value = String(storeName || '').trim();
+      if (!value) return '-';
+      return value
+        .replace(/^Melt\s+Pizzas\s*[-–—]?\s*/i, '')
+        .trim() || value;
+    }
+
     function matchesTurboStore(row) {
       const storeUuid = String(row?.store_uuid || '').trim().toLowerCase();
       return !!storeUuid && TURBO_STORE_UUIDS.includes(storeUuid);
@@ -2194,6 +2204,7 @@
           active_minutes: Number(row.oldest_active_minutes),
           store_name: row.store_name,
           order_uuid: row.oldest_active_order_uuid,
+          order_partners_unique_internal_order_id: row.oldest_active_partner_internal_order_id,
           promise_delta_minutes: row.oldest_active_promise_delta_minutes,
           delivery_status: row.oldest_active_status
         }))
@@ -2223,11 +2234,19 @@
       };
     }
 
+    function getDisplayOrderId(order) {
+      return order?.order_partners_unique_internal_order_id ||
+        order?.oldest_active_partner_internal_order_id ||
+        order?.partner_internal_order_id ||
+        order?.order_uuid ||
+        '';
+    }
+
     function formatOrderCode(orderUuid) {
       if (!orderUuid) return '-';
       const value = String(orderUuid);
-      if (value.length <= 12) return value;
-      return `${value.slice(0, 8)}…`;
+      if (value.length <= 18) return value;
+      return `${value.slice(0, 16)}…`;
     }
 
     function formatDeliveryStatus(status) {
@@ -2301,7 +2320,7 @@
       }
 
       const level = getActiveRiskLevel(oldest.active_minutes);
-      const storeName = oldest.store_name || '-';
+      const storeName = formatStoreName(oldest.store_name);
       subtext.textContent = `Más antigua: ${formatActiveMinutes(oldest.active_minutes)} · ${storeName}`;
 
       if (level !== 'neutral') {
@@ -2334,10 +2353,14 @@
       tbody.innerHTML = topOrders.map(order => {
         const activeClass = getActiveAgeClass(order.active_minutes);
         const promiseClass = getPromiseDeltaClass(order.promise_delta_minutes);
+        const displayOrderId = getDisplayOrderId(order);
+        const titleOrderId = order.order_uuid && displayOrderId !== order.order_uuid
+          ? `${displayOrderId} · Captain: ${order.order_uuid}`
+          : displayOrderId;
         return `
           <tr>
-            <td><span class="order-code" title="${order.order_uuid || ''}">${formatOrderCode(order.order_uuid)}</span></td>
-            <td>${order.store_name || '-'}</td>
+            <td><span class="order-code" title="${titleOrderId || ''}">${formatOrderCode(displayOrderId)}</span></td>
+            <td>${formatStoreName(order.store_name)}</td>
             <td>${formatDeliveryStatus(order.delivery_status)}</td>
             <td class="align-right ${activeClass}">${formatActiveMinutes(order.active_minutes)}</td>
             <td class="align-right">${formatActiveMinutes(order.promise_minutes)}</td>
@@ -2939,7 +2962,7 @@
         const oldestActiveClass = getActiveAgeClass(row.oldest_active_minutes);
 
         tr.innerHTML = `
-          <td>${row.store_name || '-'}</td>
+          <td>${formatStoreName(row.store_name)}</td>
           <td class="align-right">${row.orders_total ?? 0}</td>
           <td class="align-right">${row.delivered_orders ?? row.deliveries_total ?? 0}</td>
           <td class="align-right">${row.active_orders ?? 0}</td>
