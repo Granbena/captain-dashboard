@@ -1673,8 +1673,14 @@
     }
 
     function getYearCompareAvailable() {
-      return Array.isArray(lastYearCompareRows) && lastYearCompareRows.length > 0;
-    }
+  const hasRows = Array.isArray(lastYearCompareRows) && lastYearCompareRows.length > 0;
+
+  const hasRequestedYearDate =
+    !!lastYearCompareDate ||
+    (lastRequestMode === 'range' && !!lastRangeYearStart && !!lastRangeYearEnd);
+
+  return hasRows || hasRequestedYearDate;
+}
 
     function updateCompareToggleLabels() {
       const isTodayMode = lastRequestMode === 'today_live' || currentMode === 'today_live';
@@ -2678,40 +2684,73 @@ function getSummaryStats(rows) {
     }
 
     function renderYearComparison(currentRowsInput, previousRowsInput) {
-      const currentRowsFiltered = filterRowsByStore(currentRowsInput);
-      const previousRowsFiltered = filterRowsByStore(previousRowsInput);
+  const currentRowsFiltered = filterRowsByStore(currentRowsInput);
+  const previousRowsFiltered = filterRowsByStore(previousRowsInput);
 
-      const currentStats = getSummaryStats(currentRowsFiltered);
-      const previousStats = getSummaryStats(previousRowsFiltered);
+  const currentStats = getSummaryStats(currentRowsFiltered);
 
-      setCompareCard(
-        'summaryOrdersYearVs',
-        formatDiffPercent(currentStats.totalOrders, previousStats.totalOrders, false),
-        'summaryOrdersYearVsLabel',
-        `${formatInteger(currentStats.totalOrders)} vs ${formatInteger(previousStats.totalOrders)}`
-      );
+  if (!previousRowsFiltered.length) {
+    setCompareCard(
+      'summaryOrdersYearVs',
+      { text: '-', className: 'compare-neutral' },
+      'summaryOrdersYearVsLabel',
+      `${formatInteger(currentStats.totalOrders)} vs -`
+    );
 
-      setCompareCard(
-        'summaryOnTimeYearVs',
-        formatDiffPercent(currentStats.onTimeAvg, previousStats.onTimeAvg, false),
-        'summaryOnTimeYearVsLabel',
-        `${formatPercent(currentStats.onTimeAvg)} vs ${formatPercent(previousStats.onTimeAvg)}`
-      );
+    setCompareCard(
+      'summaryOnTimeYearVs',
+      { text: '-', className: 'compare-neutral' },
+      'summaryOnTimeYearVsLabel',
+      `${formatPercent(currentStats.onTimeAvg)} vs -`
+    );
 
-      setCompareCard(
-        'summaryE2EYearVs',
-        formatDiffMinutes(currentStats.e2eAvg, previousStats.e2eAvg, true),
-        'summaryE2EYearVsLabel',
-        `${formatNumberCompact(currentStats.e2eAvg)} min vs ${formatNumberCompact(previousStats.e2eAvg)} min`
-      );
+    setCompareCard(
+      'summaryE2EYearVs',
+      { text: '-', className: 'compare-neutral' },
+      'summaryE2EYearVsLabel',
+      `${formatNumberCompact(currentStats.e2eAvg)} min vs -`
+    );
 
-      setCompareCard(
-        'summaryPickYearVs',
-        formatDiffMinutes(currentStats.pickAvg, previousStats.pickAvg, true),
-        'summaryPickYearVsLabel',
-        `${formatNumberCompact(currentStats.pickAvg)} min vs ${formatNumberCompact(previousStats.pickAvg)} min`
-      );
-    }
+    setCompareCard(
+      'summaryPickYearVs',
+      { text: '-', className: 'compare-neutral' },
+      'summaryPickYearVsLabel',
+      `${formatNumberCompact(currentStats.pickAvg)} min vs -`
+    );
+
+    return;
+  }
+
+  const previousStats = getSummaryStats(previousRowsFiltered);
+
+  setCompareCard(
+    'summaryOrdersYearVs',
+    formatDiffPercent(currentStats.totalOrders, previousStats.totalOrders, false),
+    'summaryOrdersYearVsLabel',
+    `${formatInteger(currentStats.totalOrders)} vs ${formatInteger(previousStats.totalOrders)}`
+  );
+
+  setCompareCard(
+    'summaryOnTimeYearVs',
+    formatDiffPercent(currentStats.onTimeAvg, previousStats.onTimeAvg, false),
+    'summaryOnTimeYearVsLabel',
+    `${formatPercent(currentStats.onTimeAvg)} vs ${formatPercent(previousStats.onTimeAvg)}`
+  );
+
+  setCompareCard(
+    'summaryE2EYearVs',
+    formatDiffMinutes(currentStats.e2eAvg, previousStats.e2eAvg, true),
+    'summaryE2EYearVsLabel',
+    `${formatNumberCompact(currentStats.e2eAvg)} min vs ${formatNumberCompact(previousStats.e2eAvg)} min`
+  );
+
+  setCompareCard(
+    'summaryPickYearVs',
+    formatDiffMinutes(currentStats.pickAvg, previousStats.pickAvg, true),
+    'summaryPickYearVsLabel',
+    `${formatNumberCompact(currentStats.pickAvg)} min vs ${formatNumberCompact(previousStats.pickAvg)} min`
+  );
+}
 
     function destroyCharts() {
       if (ordersChartInstance) {
@@ -3327,9 +3366,9 @@ function getSummaryStats(rows) {
         toggleCompareCards(false);
         toggleYearCompareCards(lastYearCompareRows.length > 0);
 
-        if (lastYearCompareRows.length) {
-          renderYearComparison(lastBaseRows, lastYearCompareRows);
-        }
+        if (getYearCompareAvailable()) {
+  renderYearComparison(lastBaseRows, lastYearCompareRows);
+}
 
         const chartCompareRows = lastYearCompareRows.length
           ? lastYearCompareRows
@@ -3370,9 +3409,9 @@ function getSummaryStats(rows) {
         clearCompareCards();
       }
 
-      if (lastYearCompareRows.length) {
-        renderYearComparison(lastBaseRows, lastYearCompareRows);
-      }
+      if (getYearCompareAvailable()) {
+  renderYearComparison(lastBaseRows, lastYearCompareRows);
+}
 
       updateCompareVisibility();
 
