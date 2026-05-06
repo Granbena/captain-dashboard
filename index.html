@@ -2044,7 +2044,6 @@
     };
   });
 }
-
     function compareValues(a, b, direction = 'asc') {
       const aNull = a === null || a === undefined || a === '';
       const bNull = b === null || b === undefined || b === '';
@@ -2429,94 +2428,94 @@
     }
 
     function weightedAvg(rows, valueKey, weightResolver) {
-  let weightedSum = 0;
-  let weightTotal = 0;
+      let weightedSum = 0;
+      let weightTotal = 0;
 
-  rows.forEach(row => {
-    const value = Number(row[valueKey]);
-    if (Number.isNaN(value)) return;
+      rows.forEach(row => {
+        const value = Number(row[valueKey]);
+        if (Number.isNaN(value)) return;
 
-    const weight = Number(weightResolver(row));
-    if (Number.isNaN(weight) || weight <= 0) return;
+        const weight = Number(weightResolver(row));
+        if (Number.isNaN(weight) || weight <= 0) return;
 
-    weightedSum += value * weight;
-    weightTotal += weight;
-  });
+        weightedSum += value * weight;
+        weightTotal += weight;
+      });
 
-  if (weightTotal > 0) return weightedSum / weightTotal;
+      if (weightTotal > 0) return weightedSum / weightTotal;
 
-  return avg(rows.map(r => r[valueKey]));
-}
+      return avg(rows.map(r => r[valueKey]));
+    }
 
-function getDeliveredWeight(row) {
-  return Number(
-    row.delivered_orders ??
-    row.deliveries_total ??
-    row.orders_total ??
-    0
-  ) || 0;
-}
+    function getDeliveredWeight(row) {
+      return Number(
+        row.delivered_orders ??
+        row.deliveries_total ??
+        row.orders_total ??
+        0
+      ) || 0;
+    }
 
-function getOrdersWeight(row) {
-  return Number(row.orders_total ?? 0) || 0;
-}
+    function getOrdersWeight(row) {
+      return Number(row.orders_total ?? 0) || 0;
+    }
 
-function getSummaryStats(rows) {
-  const totalOrders = sum(rows.map(r => r.orders_total));
-  const delivered = sum(rows.map(r => r.delivered_orders ?? r.deliveries_total ?? 0));
-  const active = sum(rows.map(r => r.active_orders || 0));
-  const cancelled = sum(rows.map(r => r.cancelled_orders || 0));
-  const completionRate = totalOrders > 0 ? (delivered / totalOrders) * 100 : null;
+    function getSummaryStats(rows) {
+      const totalOrders = sum(rows.map(r => r.orders_total));
+      const delivered = sum(rows.map(r => r.delivered_orders ?? r.deliveries_total ?? 0));
+      const active = sum(rows.map(r => r.active_orders || 0));
+      const cancelled = sum(rows.map(r => r.cancelled_orders || 0));
+      const completionRate = totalOrders > 0 ? (delivered / totalOrders) * 100 : null;
 
-  const pickSum = sum(rows.map(r => r.pick_sum_minutes));
-  const pickCount = sum(rows.map(r => r.pick_count));
+      const pickSum = sum(rows.map(r => r.pick_sum_minutes));
+      const pickCount = sum(rows.map(r => r.pick_count));
 
-  const deliverySum = sum(rows.map(r => r.delivery_sum_minutes));
-  const deliveryCount = sum(rows.map(r => r.delivery_count));
+      const deliverySum = sum(rows.map(r => r.delivery_sum_minutes));
+      const deliveryCount = sum(rows.map(r => r.delivery_count));
 
-  const e2eSum = sum(rows.map(r => r.e2e_sum_minutes));
-  const e2eCount = sum(rows.map(r => r.e2e_count));
+      const e2eSum = sum(rows.map(r => r.e2e_sum_minutes));
+      const e2eCount = sum(rows.map(r => r.e2e_count));
 
-  const promiseSum = sum(rows.map(r => r.promise_sum_minutes));
-  const promiseCount = sum(rows.map(r => r.promise_count));
+      const promiseSum = sum(rows.map(r => r.promise_sum_minutes));
+      const promiseCount = sum(rows.map(r => r.promise_count));
 
-  const onTimeOrders = sum(rows.map(r => r.on_time_orders));
-  const onTimeEligibleOrders = sum(rows.map(r => r.on_time_eligible_orders));
+      const onTimeOrders = sum(rows.map(r => r.on_time_orders));
+      const onTimeEligibleOrders = sum(rows.map(r => r.on_time_eligible_orders));
 
-  return {
-    uniqueStores: countUniqueStores(rows),
-    totalOrders,
-    delivered,
-    active,
-    cancelled,
-    completionRate,
+      return {
+        uniqueStores: countUniqueStores(rows),
+        totalOrders,
+        delivered,
+        active,
+        cancelled,
+        completionRate,
 
-    pickAvg:
-      pickCount > 0
-        ? pickSum / pickCount
-        : weightedAvg(rows, 'pick_minutes', getOrdersWeight),
+        pickAvg:
+          pickCount > 0
+            ? pickSum / pickCount
+            : weightedAvg(rows, 'pick_minutes', getOrdersWeight),
 
-    deliveryAvg:
-      deliveryCount > 0
-        ? deliverySum / deliveryCount
-        : weightedAvg(rows, 'delivery_minutes', getDeliveredWeight),
+        deliveryAvg:
+          deliveryCount > 0
+            ? deliverySum / deliveryCount
+            : weightedAvg(rows, 'delivery_minutes', getDeliveredWeight),
 
-    e2eAvg:
-      e2eCount > 0
-        ? e2eSum / e2eCount
-        : weightedAvg(rows, 'e2e_minutes', getDeliveredWeight),
+        e2eAvg:
+          e2eCount > 0
+            ? e2eSum / e2eCount
+            : weightedAvg(rows, 'e2e_minutes', getDeliveredWeight),
 
-    promiseAvg:
-      promiseCount > 0
-        ? promiseSum / promiseCount
-        : weightedAvg(rows, 'promise_minutes', getOrdersWeight),
+        promiseAvg:
+          promiseCount > 0
+            ? promiseSum / promiseCount
+            : weightedAvg(rows, 'promise_minutes', getOrdersWeight),
 
-    onTimeAvg:
-      onTimeEligibleOrders > 0
-        ? (onTimeOrders / onTimeEligibleOrders) * 100
-        : weightedAvg(rows, 'on_time_pct', getDeliveredWeight),
-  };
-}
+        onTimeAvg:
+          onTimeEligibleOrders > 0
+            ? (onTimeOrders / onTimeEligibleOrders) * 100
+            : weightedAvg(rows, 'on_time_pct', getDeliveredWeight),
+      };
+    }
 
     function formatDiffPercent(current, previous, invertGood = false) {
       if (current === null || previous === null || previous === 0) {
@@ -2684,73 +2683,73 @@ function getSummaryStats(rows) {
     }
 
     function renderYearComparison(currentRowsInput, previousRowsInput) {
-  const currentRowsFiltered = filterRowsByStore(currentRowsInput);
-  const previousRowsFiltered = filterRowsByStore(previousRowsInput);
+      const currentRowsFiltered = filterRowsByStore(currentRowsInput);
+      const previousRowsFiltered = filterRowsByStore(previousRowsInput);
 
-  const currentStats = getSummaryStats(currentRowsFiltered);
+      const currentStats = getSummaryStats(currentRowsFiltered);
 
-  if (!previousRowsFiltered.length) {
-    setCompareCard(
-      'summaryOrdersYearVs',
-      { text: '-', className: 'compare-neutral' },
-      'summaryOrdersYearVsLabel',
-      `${formatInteger(currentStats.totalOrders)} vs -`
-    );
+      if (!previousRowsFiltered.length) {
+        setCompareCard(
+          'summaryOrdersYearVs',
+          { text: '-', className: 'compare-neutral' },
+          'summaryOrdersYearVsLabel',
+          `${formatInteger(currentStats.totalOrders)} vs -`
+        );
 
-    setCompareCard(
-      'summaryOnTimeYearVs',
-      { text: '-', className: 'compare-neutral' },
-      'summaryOnTimeYearVsLabel',
-      `${formatPercent(currentStats.onTimeAvg)} vs -`
-    );
+        setCompareCard(
+          'summaryOnTimeYearVs',
+          { text: '-', className: 'compare-neutral' },
+          'summaryOnTimeYearVsLabel',
+          `${formatPercent(currentStats.onTimeAvg)} vs -`
+        );
 
-    setCompareCard(
-      'summaryE2EYearVs',
-      { text: '-', className: 'compare-neutral' },
-      'summaryE2EYearVsLabel',
-      `${formatNumberCompact(currentStats.e2eAvg)} min vs -`
-    );
+        setCompareCard(
+          'summaryE2EYearVs',
+          { text: '-', className: 'compare-neutral' },
+          'summaryE2EYearVsLabel',
+          `${formatNumberCompact(currentStats.e2eAvg)} min vs -`
+        );
 
-    setCompareCard(
-      'summaryPickYearVs',
-      { text: '-', className: 'compare-neutral' },
-      'summaryPickYearVsLabel',
-      `${formatNumberCompact(currentStats.pickAvg)} min vs -`
-    );
+        setCompareCard(
+          'summaryPickYearVs',
+          { text: '-', className: 'compare-neutral' },
+          'summaryPickYearVsLabel',
+          `${formatNumberCompact(currentStats.pickAvg)} min vs -`
+        );
 
-    return;
-  }
+        return;
+      }
 
-  const previousStats = getSummaryStats(previousRowsFiltered);
+      const previousStats = getSummaryStats(previousRowsFiltered);
 
-  setCompareCard(
-    'summaryOrdersYearVs',
-    formatDiffPercent(currentStats.totalOrders, previousStats.totalOrders, false),
-    'summaryOrdersYearVsLabel',
-    `${formatInteger(currentStats.totalOrders)} vs ${formatInteger(previousStats.totalOrders)}`
-  );
+      setCompareCard(
+        'summaryOrdersYearVs',
+        formatDiffPercent(currentStats.totalOrders, previousStats.totalOrders, false),
+        'summaryOrdersYearVsLabel',
+        `${formatInteger(currentStats.totalOrders)} vs ${formatInteger(previousStats.totalOrders)}`
+      );
 
-  setCompareCard(
-    'summaryOnTimeYearVs',
-    formatDiffPercent(currentStats.onTimeAvg, previousStats.onTimeAvg, false),
-    'summaryOnTimeYearVsLabel',
-    `${formatPercent(currentStats.onTimeAvg)} vs ${formatPercent(previousStats.onTimeAvg)}`
-  );
+      setCompareCard(
+        'summaryOnTimeYearVs',
+        formatDiffPercent(currentStats.onTimeAvg, previousStats.onTimeAvg, false),
+        'summaryOnTimeYearVsLabel',
+        `${formatPercent(currentStats.onTimeAvg)} vs ${formatPercent(previousStats.onTimeAvg)}`
+      );
 
-  setCompareCard(
-    'summaryE2EYearVs',
-    formatDiffMinutes(currentStats.e2eAvg, previousStats.e2eAvg, true),
-    'summaryE2EYearVsLabel',
-    `${formatNumberCompact(currentStats.e2eAvg)} min vs ${formatNumberCompact(previousStats.e2eAvg)} min`
-  );
+      setCompareCard(
+        'summaryE2EYearVs',
+        formatDiffMinutes(currentStats.e2eAvg, previousStats.e2eAvg, true),
+        'summaryE2EYearVsLabel',
+        `${formatNumberCompact(currentStats.e2eAvg)} min vs ${formatNumberCompact(previousStats.e2eAvg)} min`
+      );
 
-  setCompareCard(
-    'summaryPickYearVs',
-    formatDiffMinutes(currentStats.pickAvg, previousStats.pickAvg, true),
-    'summaryPickYearVsLabel',
-    `${formatNumberCompact(currentStats.pickAvg)} min vs ${formatNumberCompact(previousStats.pickAvg)} min`
-  );
-}
+      setCompareCard(
+        'summaryPickYearVs',
+        formatDiffMinutes(currentStats.pickAvg, previousStats.pickAvg, true),
+        'summaryPickYearVsLabel',
+        `${formatNumberCompact(currentStats.pickAvg)} min vs ${formatNumberCompact(previousStats.pickAvg)} min`
+      );
+    }
 
     function destroyCharts() {
       if (ordersChartInstance) {
@@ -2786,28 +2785,21 @@ function getSummaryStats(rows) {
         const key = row.business_date;
 
         if (!grouped.has(key)) {
-          grouped.set(key, {
-            business_date: row.business_date,
-            orders_total: 0,
-            on_time_values: [],
-            e2e_values: [],
-          });
+          grouped.set(key, []);
         }
 
-        const item = grouped.get(key);
-        item.orders_total += Number(row.orders_total) || 0;
-
-        if (row.on_time_pct !== null && row.on_time_pct !== undefined) item.on_time_values.push(Number(row.on_time_pct));
-        if (row.e2e_minutes !== null && row.e2e_minutes !== undefined) item.e2e_values.push(Number(row.e2e_minutes));
+        grouped.get(key).push(row);
       });
 
       const result = new Map();
 
-      Array.from(grouped.values()).forEach(item => {
-        result.set(item.business_date, {
-          orders_total: item.orders_total,
-          on_time_pct: avg(item.on_time_values),
-          e2e_minutes: avg(item.e2e_values),
+      Array.from(grouped.entries()).forEach(([businessDate, dayRows]) => {
+        const stats = getSummaryStats(dayRows);
+
+        result.set(businessDate, {
+          orders_total: stats.totalOrders,
+          on_time_pct: stats.onTimeAvg,
+          e2e_minutes: stats.e2eAvg,
         });
       });
 
@@ -2838,12 +2830,17 @@ function getSummaryStats(rows) {
       return `${label} (${start} a ${end})`;
     }
 
-    function buildAlignedRangeSeries(currentRows, previousRows) {
+    function buildAlignedRangeSeries(
+      currentRows,
+      previousRows,
+      previousStart = lastRangePrevStart,
+      previousEnd = lastRangePrevEnd
+    ) {
       const currentMap = buildRangeDailySeriesMap(currentRows);
       const previousMap = buildRangeDailySeriesMap(previousRows);
 
       const currentDates = getDateRange(lastRangeCurrentStart, lastRangeCurrentEnd);
-      const previousDates = getDateRange(lastRangePrevStart, lastRangePrevEnd);
+      const previousDates = getDateRange(previousStart, previousEnd);
 
       const maxLen = Math.max(currentDates.length, previousDates.length);
       const labels = [];
@@ -2982,13 +2979,21 @@ function getSummaryStats(rows) {
         return;
       }
 
-      const aligned = buildAlignedRangeSeries(currentRows, previousRows);
-
       const usingYearComparison =
         lastYearCompareRows.length > 0 &&
         previousRowsRaw === lastYearCompareRows &&
         lastRangeYearStart &&
         lastRangeYearEnd;
+
+      const previousStart = usingYearComparison ? lastRangeYearStart : lastRangePrevStart;
+      const previousEnd = usingYearComparison ? lastRangeYearEnd : lastRangePrevEnd;
+
+      const aligned = buildAlignedRangeSeries(
+        currentRows,
+        previousRows,
+        previousStart,
+        previousEnd
+      );
 
       const currentLegendLabel = formatRangeLegendLabel(
         'Actual',
@@ -3326,6 +3331,26 @@ function getSummaryStats(rows) {
       return payload;
     }
 
+    async function fetchHistoryCompareRangeByDates(dateStart, dateEnd) {
+      const dates = getDateRange(dateStart, dateEnd);
+      const allRows = [];
+
+      for (const date of dates) {
+        const payload = await fetchHistoryCompareByDate(date, '23:59:59');
+
+        if (Array.isArray(payload.data)) {
+          allRows.push(...payload.data);
+        }
+      }
+
+      return {
+        ok: true,
+        requested_date_start: dateStart,
+        requested_date_end: dateEnd,
+        data: allRows
+      };
+    }
+
     async function fetchRangeByDates(dateStart, dateEnd) {
       const url = new URL(API_URL_DAILY);
       url.searchParams.set('date_start', dateStart);
@@ -3367,8 +3392,8 @@ function getSummaryStats(rows) {
         toggleYearCompareCards(lastYearCompareRows.length > 0);
 
         if (getYearCompareAvailable()) {
-  renderYearComparison(lastBaseRows, lastYearCompareRows);
-}
+          renderYearComparison(lastBaseRows, lastYearCompareRows);
+        }
 
         const chartCompareRows = lastYearCompareRows.length
           ? lastYearCompareRows
@@ -3410,8 +3435,8 @@ function getSummaryStats(rows) {
       }
 
       if (getYearCompareAvailable()) {
-  renderYearComparison(lastBaseRows, lastYearCompareRows);
-}
+        renderYearComparison(lastBaseRows, lastYearCompareRows);
+      }
 
       updateCompareVisibility();
 
@@ -3544,7 +3569,10 @@ function getSummaryStats(rows) {
 
           if (request.rangeYearStart && request.rangeYearEnd) {
             status.textContent = 'Leyendo comparación del año anterior...';
-            const rangeYearPayload = await fetchRangeByDates(request.rangeYearStart, request.rangeYearEnd);
+            const rangeYearPayload = await fetchHistoryCompareRangeByDates(
+              request.rangeYearStart,
+              request.rangeYearEnd
+            );
             lastYearCompareRows = normalizeRows(rangeYearPayload);
           } else {
             lastYearCompareRows = [];
@@ -3819,3 +3847,4 @@ function getSummaryStats(rows) {
   </script>
 </body>
 </html>
+   
