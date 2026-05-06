@@ -1965,6 +1965,10 @@
   const rows = payload.data || [];
 
   return rows.map(row => {
+    const hasExplicitE2E =
+      row.e2e_minutes !== undefined &&
+      row.e2e_minutes !== null;
+
     return {
       business_date: row.business_date,
       store_uuid: row.store_uuid,
@@ -1983,11 +1987,16 @@
 
       delivery_minutes:
         row.trip_minutes ??
-        row.delivery_minutes ??
+        (
+          hasExplicitE2E
+            ? row.delivery_minutes
+            : row.trip_minutes
+        ) ??
         null,
 
       e2e_minutes:
         row.e2e_minutes ??
+        row.delivery_minutes ??
         null,
 
       promise_minutes:
