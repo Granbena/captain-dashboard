@@ -4,7 +4,10 @@
     {
       "path": "/api/cron-captain-autofill",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron-captain-active-alerts",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
-
