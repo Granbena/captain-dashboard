@@ -2398,27 +2398,95 @@
       return set.size;
     }
 
-    function getSummaryStats(rows) {
-      const totalOrders = sum(rows.map(r => r.orders_total));
-      const delivered = sum(rows.map(r => r.delivered_orders ?? r.deliveries_total ?? 0));
-      const active = sum(rows.map(r => r.active_orders || 0));
-      const cancelled = sum(rows.map(r => r.cancelled_orders || 0));
-      const completionRate = totalOrders > 0 ? (delivered / totalOrders) * 100 : null;
+    function weightedAvg(rows, valueKey, weightResolver) {
+  let weightedSum = 0;
+  let weightTotal = 0;
 
-      return {
-        uniqueStores: countUniqueStores(rows),
-        totalOrders,
-        delivered,
-        active,
-        cancelled,
-        completionRate,
-        pickAvg: avg(rows.map(r => r.pick_minutes)),
-        deliveryAvg: avg(rows.map(r => r.delivery_minutes)),
-        e2eAvg: avg(rows.map(r => r.e2e_minutes)),
-        promiseAvg: avg(rows.map(r => r.promise_minutes)),
-        onTimeAvg: avg(rows.map(r => r.on_time_pct)),
-      };
-    }
+  rows.forEach(row => {
+    const value = Number(row[valueKey]);
+    if (Number.isNaN(value)) return;
+
+    const weight = Number(weightResolver(row));
+    if (Number.isNaN(weight) || weight <= 0) return;
+
+    weightedSum += value * weight;
+    weightTotal += weight;
+  });
+
+  if (weightTotal > 0) return weightedSum / weightTotal;
+
+  return avg(rows.map(r => r[valueKey]));
+}
+
+function getDeliveredWeight(row) {
+  return Number(
+    row.delivered_orders ??
+    row.deliveries_total ??
+    row.orders_total ??
+    0
+  ) || 0;
+}
+
+function getOrdersWeight(row) {
+  return Number(row.orders_total ?? 0) || 0;
+}
+
+function getSummaryStats(rows) {
+  const totalOrders = sum(rows.map(r => r.orders_total));
+  const delivered = sum(rows.map(r => r.delivered_orders ?? r.deliveries_total ?? 0));
+  const active = sum(rows.map(r => r.active_orders || 0));
+  const cancelled = sum(rows.map(r => r.cancelled_orders || 0));
+  const completionRate = totalOrders > 0 ? (delivered / totalOrders) * 100 : null;
+
+  const pickSum = sum(rows.map(r => r.pick_sum_minutes));
+  const pickCount = sum(rows.map(r => r.pick_count));
+
+  const deliverySum = sum(rows.map(r => r.delivery_sum_minutes));
+  const deliveryCount = sum(rows.map(r => r.delivery_count));
+
+  const e2eSum = sum(rows.map(r => r.e2e_sum_minutes));
+  const e2eCount = sum(rows.map(r => r.e2e_count));
+
+  const promiseSum = sum(rows.map(r => r.promise_sum_minutes));
+  const promiseCount = sum(rows.map(r => r.promise_count));
+
+  const onTimeOrders = sum(rows.map(r => r.on_time_orders));
+  const onTimeEligibleOrders = sum(rows.map(r => r.on_time_eligible_orders));
+
+  return {
+    uniqueStores: countUniqueStores(rows),
+    totalOrders,
+    delivered,
+    active,
+    cancelled,
+    completionRate,
+
+    pickAvg:
+      pickCount > 0
+        ? pickSum / pickCount
+        : weightedAvg(rows, 'pick_minutes', getOrdersWeight),
+
+    deliveryAvg:
+      deliveryCount > 0
+        ? deliverySum / deliveryCount
+        : weightedAvg(rows, 'delivery_minutes', getDeliveredWeight),
+
+    e2eAvg:
+      e2eCount > 0
+        ? e2eSum / e2eCount
+        : weightedAvg(rows, 'e2e_minutes', getDeliveredWeight),
+
+    promiseAvg:
+      promiseCount > 0
+        ? promiseSum / promiseCount
+        : weightedAvg(rows, 'promise_minutes', getOrdersWeight),
+
+    onTimeAvg:
+      onTimeEligibleOrders > 0
+        ? (onTimeOrders / onTimeEligibleOrders) * 100
+        : weightedAvg(rows, 'on_time_pct', getDeliveredWeight),
+  };
+}
 
     function formatDiffPercent(current, previous, invertGood = false) {
       if (current === null || previous === null || previous === 0) {
