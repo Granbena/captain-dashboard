@@ -1962,58 +1962,73 @@
     }
 
     function normalizeRows(payload) {
-      const rows = payload.data || [];
+  const rows = payload.data || [];
 
-      return rows.map(row => {
-        const isHistoricalShape =
-          row.collection_minutes !== undefined ||
-          row.trip_minutes !== undefined;
+  return rows.map(row => {
+    return {
+      business_date: row.business_date,
+      store_uuid: row.store_uuid,
+      store_name: row.store_name,
 
-        if (isHistoricalShape) {
-          return {
-            business_date: row.business_date,
-            store_uuid: row.store_uuid,
-            store_name: row.store_name,
-            orders_total: row.orders_total ?? 0,
-            deliveries_total: row.deliveries_total ?? 0,
-            delivered_orders: row.delivered_orders ?? row.deliveries_total ?? 0,
-            active_orders: row.active_orders ?? 0,
-            cancelled_orders: row.cancelled_orders ?? 0,
-            pick_minutes: row.collection_minutes ?? null,
-            delivery_minutes: row.trip_minutes ?? null,
-            e2e_minutes: row.delivery_minutes ?? null,
-            promise_minutes: row.promise_minutes ?? null,
-            on_time_pct: row.on_time_pct ?? null,
-            oldest_active_minutes: row.oldest_active_minutes ?? null,
-            oldest_active_order_uuid: row.oldest_active_order_uuid ?? null,
-            oldest_active_partner_internal_order_id: row.oldest_active_partner_internal_order_id ?? null,
-            oldest_active_promise_delta_minutes: row.oldest_active_promise_delta_minutes ?? null,
-            oldest_active_status: row.oldest_active_status ?? null
-          };
-        }
+      orders_total: row.orders_total ?? 0,
+      deliveries_total: row.deliveries_total ?? 0,
+      delivered_orders: row.delivered_orders ?? row.deliveries_total ?? 0,
+      active_orders: row.active_orders ?? 0,
+      cancelled_orders: row.cancelled_orders ?? 0,
 
-        return {
-          business_date: row.business_date,
-          store_uuid: row.store_uuid,
-          store_name: row.store_name,
-          orders_total: row.orders_total ?? 0,
-          deliveries_total: row.deliveries_total ?? 0,
-          delivered_orders: row.delivered_orders ?? row.deliveries_total ?? 0,
-          active_orders: row.active_orders ?? 0,
-          cancelled_orders: row.cancelled_orders ?? 0,
-          pick_minutes: row.pick_minutes ?? null,
-          delivery_minutes: row.delivery_minutes ?? null,
-          e2e_minutes: row.e2e_minutes ?? null,
-          promise_minutes: row.promise_minutes ?? null,
-          on_time_pct: row.on_time_pct ?? null,
-          oldest_active_minutes: row.oldest_active_minutes ?? null,
-          oldest_active_order_uuid: row.oldest_active_order_uuid ?? null,
-          oldest_active_partner_internal_order_id: row.oldest_active_partner_internal_order_id ?? null,
-          oldest_active_promise_delta_minutes: row.oldest_active_promise_delta_minutes ?? null,
-          oldest_active_status: row.oldest_active_status ?? null
-        };
-      });
-    }
+      pick_minutes:
+        row.pick_minutes ??
+        row.collection_minutes ??
+        null,
+
+      delivery_minutes:
+        row.trip_minutes ??
+        row.delivery_minutes ??
+        null,
+
+      e2e_minutes:
+        row.e2e_minutes ??
+        null,
+
+      promise_minutes:
+        row.promise_minutes ?? null,
+
+      on_time_pct:
+        row.on_time_pct ?? null,
+
+      pick_sum_minutes:
+        row.pick_sum_minutes ?? null,
+      pick_count:
+        row.pick_count ?? null,
+
+      delivery_sum_minutes:
+        row.delivery_sum_minutes ?? null,
+      delivery_count:
+        row.delivery_count ?? null,
+
+      e2e_sum_minutes:
+        row.e2e_sum_minutes ?? null,
+      e2e_count:
+        row.e2e_count ?? null,
+
+      promise_sum_minutes:
+        row.promise_sum_minutes ?? null,
+      promise_count:
+        row.promise_count ?? null,
+
+      on_time_orders:
+        row.on_time_orders ?? null,
+      on_time_eligible_orders:
+        row.on_time_eligible_orders ?? null,
+
+      oldest_active_minutes: row.oldest_active_minutes ?? null,
+      oldest_active_order_uuid: row.oldest_active_order_uuid ?? null,
+      oldest_active_partner_internal_order_id: row.oldest_active_partner_internal_order_id ?? null,
+      oldest_active_promise_delta_minutes: row.oldest_active_promise_delta_minutes ?? null,
+      oldest_active_status: row.oldest_active_status ?? null
+    };
+  });
+}
 
     function compareValues(a, b, direction = 'asc') {
       const aNull = a === null || a === undefined || a === '';
