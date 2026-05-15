@@ -2637,8 +2637,8 @@ function getE2EClass(value) {
       document.getElementById('summaryPromise').textContent = stats.promiseAvg !== null ? formatNumber(stats.promiseAvg, 1) : '-';
       document.getElementById('summaryOnTime').textContent = stats.onTimeAvg !== null ? formatPercent(stats.onTimeAvg) : '-';
 
-      setSummaryThresholdClass('summaryE2E', stats.e2eAvg, value => value <= 41);
-      setSummaryThresholdClass('summaryOnTime', stats.onTimeAvg, value => value >= 90.5);
+      setSummaryThresholdClass('summaryE2E', stats.e2eAvg, value => value <= 43);
+      setSummaryThresholdClass('summaryOnTime', stats.onTimeAvg, value => value >= 85);
       updateActiveOrdersCard(rows);
 
       if (activeOrdersPanelOpen) {
