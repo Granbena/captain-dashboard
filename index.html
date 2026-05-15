@@ -2099,20 +2099,20 @@
     }
 
     function getOnTimeClass(value) {
-      const num = Number(value);
-      if (Number.isNaN(num)) return '';
-      if (num < 80) return 'pill pill-red';
-      if (num < 90) return 'pill pill-yellow';
-      return 'pill pill-green';
-    }
+  const num = Number(value);
+  if (Number.isNaN(num)) return '';
+  if (num < 80) return 'pill pill-red';
+  if (num < 85) return 'pill pill-yellow';
+  return 'pill pill-green';
+}
 
-    function getE2EClass(value) {
-      const num = Number(value);
-      if (Number.isNaN(num)) return '';
-      if (num > 50) return 'metric-red';
-      if (num >= 40) return 'metric-yellow';
-      return 'metric-green';
-    }
+function getE2EClass(value) {
+  const num = Number(value);
+  if (Number.isNaN(num)) return '';
+  if (num > 50) return 'metric-red';
+  if (num > 43) return 'metric-yellow';
+  return 'metric-green';
+}
 
     function getPickClass(value) {
       const num = Number(value);
@@ -2171,12 +2171,12 @@
     }
 
     function getActiveRiskLevel(value) {
-      const num = Number(value);
-      if (Number.isNaN(num)) return 'neutral';
-      if (num >= 41) return 'red';
-      if (num >= 31) return 'yellow';
-      return 'green';
-    }
+  const num = Number(value);
+  if (Number.isNaN(num)) return 'neutral';
+  if (num >= 43) return 'red';
+  if (num >= 31) return 'yellow';
+  return 'green';
+}
 
     function getActiveAgeClass(value) {
       const level = getActiveRiskLevel(value);
