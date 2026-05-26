@@ -3617,6 +3617,26 @@ function getE2EClass(value) {
       }
     }
 
+    function isAdminActiveProfile(profile) {
+      return profile?.role === 'admin' && profile?.active === true;
+    }
+
+    function showLoginView(message = '') {
+      currentSession = null;
+      currentProfile = null;
+      turboMode = false;
+      updateTurboButtonVisibility();
+      document.getElementById('appView').style.display = 'none';
+      document.getElementById('loginView').style.display = 'flex';
+      document.getElementById('loginError').textContent = message;
+      document.getElementById('password').value = '';
+    }
+
+    async function rejectDashboardAccess() {
+      await supabaseClient.auth.signOut();
+      showLoginView('Tu usuario no tiene acceso al dashboard.');
+    }
+
     async function loadCurrentUserProfile() {
       const { data: userData } = await supabaseClient.auth.getUser();
       const user = userData.user;
@@ -3638,13 +3658,12 @@ function getE2EClass(value) {
         return null;
       }
 
-      currentProfile = profile || null;
+      currentProfile = isAdminActiveProfile(profile) ? profile : null;
       return currentProfile;
     }
 
     function userCanUseTurbo() {
-      const role = currentProfile?.role || '';
-      return role === 'admin' || role === 'manager';
+      return isAdminActiveProfile(currentProfile);
     }
 
     function updateTurboButtonVisibility() {
@@ -3695,14 +3714,7 @@ function getE2EClass(value) {
 
     async function signOut() {
       await supabaseClient.auth.signOut();
-      currentSession = null;
-      currentProfile = null;
-      turboMode = false;
-      updateTurboButtonVisibility();
-      document.getElementById('appView').style.display = 'none';
-      document.getElementById('loginView').style.display = 'flex';
-      document.getElementById('loginError').textContent = '';
-      document.getElementById('password').value = '';
+      showLoginView();
     }
 
     async function updateUserBadge() {
@@ -3724,20 +3736,23 @@ function getE2EClass(value) {
       currentSession = data.session || null;
 
       if (!currentSession) {
-        currentProfile = null;
-        turboMode = false;
-        updateTurboButtonVisibility();
-        document.getElementById('loginView').style.display = 'flex';
-        document.getElementById('appView').style.display = 'none';
-        return;
+        showLoginView();
+        return false;
       }
 
-      await loadCurrentUserProfile();
+      const profile = await loadCurrentUserProfile();
+
+      if (!isAdminActiveProfile(profile)) {
+        await rejectDashboardAccess();
+        return false;
+      }
+
       updateTurboButtonVisibility();
       document.getElementById('loginView').style.display = 'none';
       document.getElementById('appView').style.display = 'block';
       await updateUserBadge();
       await loadDashboard();
+      return true;
     }
 
     document.querySelectorAll('.mode-tab').forEach(btn => {
@@ -3826,8 +3841,18 @@ function getE2EClass(value) {
       updateCompareVisibility();
     });
 
-    supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
       currentSession = session || null;
+
+      if (!currentSession) {
+        const loginError = document.getElementById('loginError').textContent;
+        showLoginView(loginError);
+        return;
+      }
+
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        await initApp();
+      }
     });
 
     document.getElementById('business_date').value = todayChileIso();
