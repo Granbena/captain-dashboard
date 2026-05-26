@@ -788,22 +788,6 @@
     font-weight: 700;
   }
 
-  .turbo-btn {
-    background: #ffffff;
-    color: #111827;
-    border: 1px solid #d1d5db;
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 13px;
-    font-weight: 800;
-  }
-
-  .turbo-btn.active {
-    background: #dc2626;
-    color: white;
-    border-color: #dc2626;
-  }
-
   @media (max-width: 1080px) {
     .hero-layout {
       grid-template-columns: 1fr;
@@ -864,27 +848,11 @@
       align-items: stretch;
     }
 
-    .header-right.has-turbo {
-      grid-template-columns: 92px minmax(0, 1fr) 82px;
-    }
-
-    .header-right.has-turbo .turbo-btn {
+    .header-right .user-badge {
       grid-column: 1;
     }
 
-    .header-right.has-turbo .user-badge {
-      grid-column: 2;
-    }
-
-    .header-right.has-turbo .logout-btn {
-      grid-column: 3;
-    }
-
-    .header-right:not(.has-turbo) .user-badge {
-      grid-column: 1;
-    }
-
-    .header-right:not(.has-turbo) .logout-btn {
+    .header-right .logout-btn {
       grid-column: 2;
     }
 
@@ -894,7 +862,6 @@
     }
 
     .user-badge,
-    .turbo-btn,
     .logout-btn {
       width: 100%;
       display: flex;
@@ -910,7 +877,6 @@
       padding: 9px 8px;
     }
 
-    .turbo-btn,
     .logout-btn {
       padding: 9px 8px;
       border-radius: 12px;
@@ -1187,7 +1153,6 @@
       </div>
 
       <div class="header-right">
-        <button id="turboBtn" class="turbo-btn hidden" type="button">🚀 TURBO</button>
         <div id="userBadge" class="user-badge">Sesión activa</div>
         <button id="logoutBtn" class="logout-btn" type="button">Cerrar sesión</button>
       </div>
@@ -1574,8 +1539,6 @@
     let compareView = 'both';
     let currentSession = null;
     let currentProfile = null;
-    let turboMode = false;
-    const TURBO_STORE_UUIDS = ['91dd02103d29', 'a6738d5db502', 'bb8bf37cdcda'];
 
     function isMobileView() {
       return window.innerWidth <= 768;
@@ -2148,18 +2111,9 @@ function getE2EClass(value) {
         .trim() || value;
     }
 
-    function matchesTurboStore(row) {
-      const storeUuid = String(row?.store_uuid || '').trim().toLowerCase();
-      return !!storeUuid && TURBO_STORE_UUIDS.includes(storeUuid);
-    }
-
     function filterRowsByStore(rows) {
       const storeFilter = document.getElementById('store_filter').value.trim();
       let filteredRows = [...rows];
-
-      if (turboMode) {
-        filteredRows = filteredRows.filter(row => matchesTurboStore(row));
-      }
 
       if (!storeFilter) return filteredRows;
 
@@ -2196,10 +2150,6 @@ function getE2EClass(value) {
     function filterActiveOrdersDetail(orders = lastActiveOrdersDetail) {
       const storeFilter = document.getElementById('store_filter').value.trim();
       let filteredOrders = Array.isArray(orders) ? [...orders] : [];
-
-      if (turboMode) {
-        filteredOrders = filteredOrders.filter(order => matchesTurboStore(order));
-      }
 
       if (!storeFilter) return filteredOrders;
 
@@ -3624,8 +3574,6 @@ function getE2EClass(value) {
     function showLoginView(message = '') {
       currentSession = null;
       currentProfile = null;
-      turboMode = false;
-      updateTurboButtonVisibility();
       document.getElementById('appView').style.display = 'none';
       document.getElementById('loginView').style.display = 'flex';
       document.getElementById('loginError').textContent = message;
@@ -3660,31 +3608,6 @@ function getE2EClass(value) {
 
       currentProfile = isAdminActiveProfile(profile) ? profile : null;
       return currentProfile;
-    }
-
-    function userCanUseTurbo() {
-      return isAdminActiveProfile(currentProfile);
-    }
-
-    function updateTurboButtonVisibility() {
-      const btn = document.getElementById('turboBtn');
-      const headerRight = document.querySelector('.header-right');
-      const allowed = userCanUseTurbo();
-      btn.classList.toggle('hidden', !allowed);
-      if (headerRight) headerRight.classList.toggle('has-turbo', allowed);
-
-      if (!allowed) {
-        turboMode = false;
-      }
-
-      btn.classList.toggle('active', turboMode && allowed);
-    }
-
-    function toggleTurboMode() {
-      if (!userCanUseTurbo()) return;
-      turboMode = !turboMode;
-      updateTurboButtonVisibility();
-      applyCurrentView();
     }
 
     async function signIn() {
@@ -3747,7 +3670,6 @@ function getE2EClass(value) {
         return false;
       }
 
-      updateTurboButtonVisibility();
       document.getElementById('loginView').style.display = 'none';
       document.getElementById('appView').style.display = 'block';
       await updateUserBadge();
@@ -3811,7 +3733,6 @@ function getE2EClass(value) {
     document.getElementById('loadBtn').addEventListener('click', loadDashboard);
     document.getElementById('loginBtn').addEventListener('click', signIn);
     document.getElementById('logoutBtn').addEventListener('click', signOut);
-    document.getElementById('turboBtn').addEventListener('click', toggleTurboMode);
     document.getElementById('activeOrdersCard').addEventListener('click', toggleActiveOrdersPanel);
     document.getElementById('activeOrdersCard').addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
