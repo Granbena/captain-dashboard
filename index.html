@@ -858,29 +858,64 @@
     min-width: 720px;
   }
 
-  .threshold-chip {
+  .threshold-input-cell {
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
-    padding: 5px 9px;
-    font-size: 12px;
-    font-weight: 800;
+    gap: 6px;
     white-space: nowrap;
   }
 
-  .threshold-green {
-    background: #dcfce7;
+  .threshold-operator,
+  .threshold-unit {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .threshold-input {
+    width: 82px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: right;
+  }
+
+  .config-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .config-save-btn {
+    background: #111827;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .config-save-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
+
+  .config-status {
+    min-height: 20px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .config-status.success {
     color: #166534;
   }
 
-  .threshold-yellow {
-    background: #fef3c7;
-    color: #92400e;
-  }
-
-  .threshold-red {
-    background: #fee2e2;
-    color: #991b1b;
+  .config-status.error {
+    color: #b00020;
   }
 
   .config-empty-state {
@@ -1628,6 +1663,11 @@
               <tbody id="kpiThresholdRows"></tbody>
             </table>
           </div>
+
+          <div class="config-actions">
+            <button id="saveKpiThresholdsBtn" class="config-save-btn" type="button">Guardar cambios</button>
+            <div id="kpiThresholdStatus" class="config-status" aria-live="polite"></div>
+          </div>
         </section>
 
         <section class="config-module">
@@ -1652,8 +1692,9 @@
     const API_URL_LIVE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read-live';
     const API_URL_SYNC = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-sync';
     const API_URL_HISTORY_COMPARE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-history-compare';
+    const API_URL_KPI_THRESHOLDS = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/dashboard-kpi-thresholds';
 
-    const KPI_THRESHOLDS = {
+    const DEFAULT_KPI_THRESHOLDS = {
       onTime: {
         redBelow: 80,
         yellowBelow: 85,
@@ -1680,6 +1721,56 @@
         redMin: 43
       }
     };
+
+    let KPI_THRESHOLDS = cloneThresholds(DEFAULT_KPI_THRESHOLDS);
+
+    const KPI_THRESHOLD_CONFIG_ROWS = [
+      {
+        key: 'onTime',
+        label: 'OnTime',
+        fields: {
+          green: { key: 'greenMin', operator: '>=', unit: '%' },
+          yellow: { key: 'yellowBelow', operator: '<', unit: '%' },
+          red: { key: 'redBelow', operator: '<', unit: '%' }
+        }
+      },
+      {
+        key: 'e2e',
+        label: 'E2E',
+        fields: {
+          green: { key: 'greenMax', operator: '<=', unit: 'min' },
+          yellow: { key: 'yellowAbove', operator: '>', unit: 'min' },
+          red: { key: 'redAbove', operator: '>', unit: 'min' }
+        }
+      },
+      {
+        key: 'pick',
+        label: 'Pick',
+        fields: {
+          green: { key: 'greenBelow', operator: '<', unit: 'min' },
+          yellow: { key: 'yellowMin', operator: '>=', unit: 'min' },
+          red: { key: 'redAbove', operator: '>', unit: 'min' }
+        }
+      },
+      {
+        key: 'delivery',
+        label: 'Delivery',
+        fields: {
+          green: { key: 'greenBelow', operator: '<', unit: 'min' },
+          yellow: { key: 'yellowMin', operator: '>=', unit: 'min' },
+          red: { key: 'redAbove', operator: '>', unit: 'min' }
+        }
+      },
+      {
+        key: 'activeAge',
+        label: 'Activas/antigüedad',
+        fields: {
+          green: { key: 'greenBelow', operator: '<', unit: 'min' },
+          yellow: { key: 'yellowMin', operator: '>=', unit: 'min' },
+          red: { key: 'redMin', operator: '>=', unit: 'min' }
+        }
+      }
+    ];
 
     let currentMode = 'today_live';
     let currentRows = [];
@@ -3748,41 +3839,183 @@
       }
     }
 
-    function getThresholdConfigRows() {
-      const { onTime, e2e, pick, delivery, activeAge } = KPI_THRESHOLDS;
+    function cloneThresholds(thresholds) {
+      return JSON.parse(JSON.stringify(thresholds));
+    }
 
-      return [
-        {
-          label: 'OnTime',
-          green: `>= ${onTime.greenMin}%`,
-          yellow: `>= ${onTime.redBelow}% y < ${onTime.yellowBelow}%`,
-          red: `< ${onTime.redBelow}%`
-        },
-        {
-          label: 'E2E',
-          green: `<= ${e2e.greenMax} min`,
-          yellow: `> ${e2e.yellowAbove} y <= ${e2e.redAbove} min`,
-          red: `> ${e2e.redAbove} min`
-        },
-        {
-          label: 'Pick',
-          green: `< ${pick.greenBelow} min`,
-          yellow: `>= ${pick.yellowMin} y <= ${pick.redAbove} min`,
-          red: `> ${pick.redAbove} min`
-        },
-        {
-          label: 'Delivery',
-          green: `< ${delivery.greenBelow} min`,
-          yellow: `>= ${delivery.yellowMin} y <= ${delivery.redAbove} min`,
-          red: `> ${delivery.redAbove} min`
-        },
-        {
-          label: 'Activas/antigüedad',
-          green: `< ${activeAge.greenBelow} min`,
-          yellow: `>= ${activeAge.yellowMin} y < ${activeAge.redMin} min`,
-          red: `>= ${activeAge.redMin} min`
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function readThresholdNumber(source, metricKey, fieldKey) {
+      const value = Number(source?.[fieldKey]);
+      if (!Number.isFinite(value)) {
+        throw new Error(`${metricKey}: ${fieldKey} debe ser un numero valido.`);
+      }
+      return value;
+    }
+
+    function normalizeThresholdSet(metricKey, source) {
+      if (!source || typeof source !== 'object') {
+        throw new Error(`${metricKey}: thresholds invalidos.`);
+      }
+
+      if (metricKey === 'onTime') {
+        const redBelow = readThresholdNumber(source, metricKey, 'redBelow');
+        const yellowBelow = readThresholdNumber(source, metricKey, 'yellowBelow');
+        const greenMin = readThresholdNumber(source, metricKey, 'greenMin');
+
+        if (!(redBelow < yellowBelow && yellowBelow <= greenMin)) {
+          throw new Error('OnTime: se espera redBelow < yellowBelow <= greenMin.');
         }
-      ];
+
+        return { redBelow, yellowBelow, greenMin };
+      }
+
+      if (metricKey === 'e2e') {
+        const greenMax = readThresholdNumber(source, metricKey, 'greenMax');
+        const yellowAbove = readThresholdNumber(source, metricKey, 'yellowAbove');
+        const redAbove = readThresholdNumber(source, metricKey, 'redAbove');
+
+        if (!(greenMax <= yellowAbove && yellowAbove < redAbove)) {
+          throw new Error('E2E: se espera greenMax <= yellowAbove < redAbove.');
+        }
+
+        return { greenMax, yellowAbove, redAbove };
+      }
+
+      if (metricKey === 'pick' || metricKey === 'delivery') {
+        const greenBelow = readThresholdNumber(source, metricKey, 'greenBelow');
+        const yellowMin = readThresholdNumber(source, metricKey, 'yellowMin');
+        const redAbove = readThresholdNumber(source, metricKey, 'redAbove');
+
+        if (!(greenBelow <= yellowMin && yellowMin < redAbove)) {
+          throw new Error(`${metricKey}: se espera greenBelow <= yellowMin < redAbove.`);
+        }
+
+        return { greenBelow, yellowMin, redAbove };
+      }
+
+      if (metricKey === 'activeAge') {
+        const greenBelow = readThresholdNumber(source, metricKey, 'greenBelow');
+        const yellowMin = readThresholdNumber(source, metricKey, 'yellowMin');
+        const redMin = readThresholdNumber(source, metricKey, 'redMin');
+
+        if (!(greenBelow <= yellowMin && yellowMin < redMin)) {
+          throw new Error('ActiveAge: se espera greenBelow <= yellowMin < redMin.');
+        }
+
+        return { greenBelow, yellowMin, redMin };
+      }
+
+      throw new Error(`KPI desconocido: ${metricKey}.`);
+    }
+
+    function validateKpiThresholds(thresholds) {
+      const next = cloneThresholds(DEFAULT_KPI_THRESHOLDS);
+
+      Object.keys(DEFAULT_KPI_THRESHOLDS).forEach(metricKey => {
+        if (thresholds?.[metricKey]) {
+          next[metricKey] = normalizeThresholdSet(metricKey, thresholds[metricKey]);
+        } else {
+          next[metricKey] = normalizeThresholdSet(metricKey, next[metricKey]);
+        }
+      });
+
+      return next;
+    }
+
+    function normalizeThresholdsFromApi(apiData) {
+      if (!apiData) return cloneThresholds(DEFAULT_KPI_THRESHOLDS);
+
+      if (Array.isArray(apiData)) {
+        const next = cloneThresholds(DEFAULT_KPI_THRESHOLDS);
+
+        apiData.forEach(row => {
+          const metricKey = row?.metric_key;
+          if (metricKey && Object.prototype.hasOwnProperty.call(DEFAULT_KPI_THRESHOLDS, metricKey)) {
+            next[metricKey] = normalizeThresholdSet(metricKey, row.thresholds);
+          }
+        });
+
+        return validateKpiThresholds(next);
+      }
+
+      if (apiData.thresholds && typeof apiData.thresholds === 'object') {
+        return validateKpiThresholds(apiData.thresholds);
+      }
+
+      return validateKpiThresholds(apiData);
+    }
+
+    async function loadKpiThresholds() {
+      try {
+        const headers = await getAuthHeaders();
+
+        if (!headers.Authorization) {
+          KPI_THRESHOLDS = cloneThresholds(DEFAULT_KPI_THRESHOLDS);
+          return KPI_THRESHOLDS;
+        }
+
+        const res = await fetch(API_URL_KPI_THRESHOLDS, {
+          method: 'GET',
+          cache: 'no-store',
+          headers
+        });
+
+        const payload = await res.json().catch(() => null);
+
+        if (!res.ok || !payload?.ok) {
+          throw new Error(payload?.error || 'Error leyendo rangos KPI.');
+        }
+
+        KPI_THRESHOLDS = normalizeThresholdsFromApi(payload.data);
+      } catch (error) {
+        console.error('Error cargando rangos KPI:', error);
+        KPI_THRESHOLDS = cloneThresholds(DEFAULT_KPI_THRESHOLDS);
+      }
+
+      return KPI_THRESHOLDS;
+    }
+
+    function setKpiThresholdStatus(message = '', type = '') {
+      const status = document.getElementById('kpiThresholdStatus');
+      if (!status) return;
+      status.textContent = message;
+      status.className = 'config-status';
+      if (type) status.classList.add(type);
+    }
+
+    function getThresholdConfigRows() {
+      return KPI_THRESHOLD_CONFIG_ROWS;
+    }
+
+    function renderThresholdInput(row, field) {
+      const metricThresholds = KPI_THRESHOLDS[row.key] || DEFAULT_KPI_THRESHOLDS[row.key] || {};
+      const value = metricThresholds[field.key] ?? '';
+      const ariaLabel = `${row.label} ${field.key}`;
+
+      return `
+        <span class="threshold-input-cell">
+          <span class="threshold-operator">${escapeHtml(field.operator)}</span>
+          <input
+            class="threshold-input"
+            type="number"
+            min="0"
+            step="0.1"
+            value="${escapeHtml(value)}"
+            data-threshold-metric="${escapeHtml(row.key)}"
+            data-threshold-key="${escapeHtml(field.key)}"
+            aria-label="${escapeHtml(ariaLabel)}"
+          >
+          <span class="threshold-unit">${escapeHtml(field.unit)}</span>
+        </span>
+      `;
     }
 
     function renderKpiThresholdConfig() {
@@ -3791,12 +4024,92 @@
 
       tbody.innerHTML = getThresholdConfigRows().map(row => `
         <tr>
-          <td><strong>${row.label}</strong></td>
-          <td><span class="threshold-chip threshold-green">${row.green}</span></td>
-          <td><span class="threshold-chip threshold-yellow">${row.yellow}</span></td>
-          <td><span class="threshold-chip threshold-red">${row.red}</span></td>
+          <td><strong>${escapeHtml(row.label)}</strong></td>
+          <td>${renderThresholdInput(row, row.fields.green)}</td>
+          <td>${renderThresholdInput(row, row.fields.yellow)}</td>
+          <td>${renderThresholdInput(row, row.fields.red)}</td>
         </tr>
       `).join('');
+    }
+
+    function readKpiThresholdInput(metricKey, fieldKey) {
+      const input = document.querySelector(`[data-threshold-metric="${metricKey}"][data-threshold-key="${fieldKey}"]`);
+
+      if (!input) {
+        throw new Error(`Falta el campo ${metricKey}.${fieldKey}.`);
+      }
+
+      const rawValue = input.value.trim();
+      if (!rawValue) {
+        throw new Error(`${metricKey}: ${fieldKey} es obligatorio.`);
+      }
+
+      return Number(rawValue);
+    }
+
+    function collectKpiThresholdInputs() {
+      const next = cloneThresholds(DEFAULT_KPI_THRESHOLDS);
+
+      getThresholdConfigRows().forEach(row => {
+        Object.values(row.fields).forEach(field => {
+          next[row.key][field.key] = readKpiThresholdInput(row.key, field.key);
+        });
+      });
+
+      return validateKpiThresholds(next);
+    }
+
+    async function saveKpiThresholds() {
+      if (!isAdminActiveProfile(currentProfile)) return;
+
+      const saveBtn = document.getElementById('saveKpiThresholdsBtn');
+
+      try {
+        const nextThresholds = collectKpiThresholdInputs();
+        const headers = await getAuthHeaders();
+
+        if (!headers.Authorization) {
+          throw new Error('Sesion no disponible.');
+        }
+
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.textContent = 'Guardando...';
+        }
+
+        setKpiThresholdStatus('Guardando cambios...');
+
+        const res = await fetch(API_URL_KPI_THRESHOLDS, {
+          method: 'PUT',
+          cache: 'no-store',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ thresholds: nextThresholds })
+        });
+
+        const payload = await res.json().catch(() => null);
+
+        if (!res.ok || !payload?.ok) {
+          throw new Error(payload?.error || 'No se pudieron guardar los rangos KPI.');
+        }
+
+        KPI_THRESHOLDS = payload.data
+          ? normalizeThresholdsFromApi(payload.data)
+          : cloneThresholds(nextThresholds);
+
+        renderKpiThresholdConfig();
+        applyCurrentView();
+        setKpiThresholdStatus('Cambios guardados.', 'success');
+      } catch (error) {
+        setKpiThresholdStatus(error.message || 'No se pudieron guardar los cambios.', 'error');
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Guardar cambios';
+        }
+      }
     }
 
     function updateAdminNavigation() {
@@ -3827,6 +4140,7 @@
       document.getElementById('dashboardView')?.classList.add('hidden');
       document.getElementById('configView')?.classList.remove('hidden');
       renderKpiThresholdConfig();
+      setKpiThresholdStatus();
       updateAdminNavigation();
     }
 
@@ -3838,6 +4152,8 @@
       currentSession = null;
       currentProfile = null;
       currentAppView = 'dashboard';
+      KPI_THRESHOLDS = cloneThresholds(DEFAULT_KPI_THRESHOLDS);
+      setKpiThresholdStatus();
       document.getElementById('dashboardView')?.classList.remove('hidden');
       document.getElementById('configView')?.classList.add('hidden');
       document.getElementById('configNavBtn')?.classList.add('hidden');
@@ -3938,6 +4254,8 @@
         return false;
       }
 
+      await loadKpiThresholds();
+
       document.getElementById('loginView').style.display = 'none';
       document.getElementById('appView').style.display = 'block';
       await updateUserBadge();
@@ -4009,6 +4327,7 @@
     document.getElementById('loginBtn').addEventListener('click', signIn);
     document.getElementById('dashboardNavBtn').addEventListener('click', showDashboardView);
     document.getElementById('configNavBtn').addEventListener('click', showConfigView);
+    document.getElementById('saveKpiThresholdsBtn').addEventListener('click', saveKpiThresholds);
     document.getElementById('logoutBtn').addEventListener('click', signOut);
     document.getElementById('activeOrdersCard').addEventListener('click', toggleActiveOrdersPanel);
     document.getElementById('activeOrdersCard').addEventListener('keydown', (e) => {
