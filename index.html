@@ -853,31 +853,125 @@
     line-height: 1.35;
   }
 
-  .threshold-table {
-    width: 100%;
-    min-width: 720px;
+  .threshold-help {
+    background: var(--panel-soft);
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: #374151;
+    font-size: 13px;
+    line-height: 1.4;
+    margin-bottom: 12px;
   }
 
-  .threshold-input-cell {
-    display: inline-flex;
+  .threshold-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .threshold-item {
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+  }
+
+  .threshold-item:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+
+  .threshold-item-header {
+    display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .threshold-item-title {
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  .threshold-direction {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 5px 9px;
     white-space: nowrap;
   }
 
-  .threshold-operator,
+  .threshold-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .threshold-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .threshold-field label {
+    color: #374151;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .threshold-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .threshold-input {
+    width: 100%;
+    max-width: 120px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: right;
+  }
+
   .threshold-unit {
     color: var(--muted);
     font-size: 12px;
     font-weight: 800;
   }
 
-  .threshold-input {
-    width: 82px;
+  .threshold-preview {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .threshold-preview-item {
+    border-radius: 10px;
     padding: 8px 10px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 800;
-    text-align: right;
+    line-height: 1.35;
+  }
+
+  .threshold-preview-green {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .threshold-preview-yellow {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .threshold-preview-red {
+    background: #fee2e2;
+    color: #991b1b;
   }
 
   .config-actions {
@@ -952,6 +1046,20 @@
       width: 100%;
       max-width: 100%;
       overflow-x: hidden;
+    }
+
+    .threshold-item-header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .threshold-fields,
+    .threshold-preview {
+      grid-template-columns: 1fr;
+    }
+
+    .threshold-input {
+      max-width: none;
     }
 
     .app-header {
@@ -1650,19 +1758,11 @@
           <div class="config-module-title">Rangos KPI</div>
           <div class="config-module-subtle">Umbrales actuales usados para colorear el dashboard.</div>
 
-          <div class="table-scroll">
-            <table class="threshold-table">
-              <thead>
-                <tr>
-                  <th>KPI</th>
-                  <th>Verde</th>
-                  <th>Amarillo</th>
-                  <th>Rojo</th>
-                </tr>
-              </thead>
-              <tbody id="kpiThresholdRows"></tbody>
-            </table>
+          <div class="threshold-help">
+            Solo debes definir el límite verde y rojo. El rango amarillo se calcula automáticamente.
           </div>
+
+          <div id="kpiThresholdRows" class="threshold-list"></div>
 
           <div class="config-actions">
             <button id="saveKpiThresholdsBtn" class="config-save-btn" type="button">Guardar cambios</button>
@@ -1728,47 +1828,52 @@
       {
         key: 'onTime',
         label: 'OnTime',
-        fields: {
-          green: { key: 'greenMin', operator: '>=', unit: '%' },
-          yellow: { key: 'yellowBelow', operator: '<', unit: '%' },
-          red: { key: 'redBelow', operator: '<', unit: '%' }
-        }
+        directionLabel: 'Mayor es mejor',
+        unit: '%',
+        inputs: [
+          { key: 'redBelow', label: 'Rojo menor a' },
+          { key: 'greenMin', label: 'Verde desde' }
+        ]
       },
       {
         key: 'e2e',
         label: 'E2E',
-        fields: {
-          green: { key: 'greenMax', operator: '<=', unit: 'min' },
-          yellow: { key: 'yellowAbove', operator: '>', unit: 'min' },
-          red: { key: 'redAbove', operator: '>', unit: 'min' }
-        }
+        directionLabel: 'Menor es mejor',
+        unit: 'min',
+        inputs: [
+          { key: 'greenMax', label: 'Verde hasta' },
+          { key: 'redAbove', label: 'Rojo sobre' }
+        ]
       },
       {
         key: 'pick',
         label: 'Pick',
-        fields: {
-          green: { key: 'greenBelow', operator: '<', unit: 'min' },
-          yellow: { key: 'yellowMin', operator: '>=', unit: 'min' },
-          red: { key: 'redAbove', operator: '>', unit: 'min' }
-        }
+        directionLabel: 'Menor es mejor',
+        unit: 'min',
+        inputs: [
+          { key: 'greenBelow', label: 'Verde hasta' },
+          { key: 'redAbove', label: 'Rojo sobre' }
+        ]
       },
       {
         key: 'delivery',
         label: 'Delivery',
-        fields: {
-          green: { key: 'greenBelow', operator: '<', unit: 'min' },
-          yellow: { key: 'yellowMin', operator: '>=', unit: 'min' },
-          red: { key: 'redAbove', operator: '>', unit: 'min' }
-        }
+        directionLabel: 'Menor es mejor',
+        unit: 'min',
+        inputs: [
+          { key: 'greenBelow', label: 'Verde hasta' },
+          { key: 'redAbove', label: 'Rojo sobre' }
+        ]
       },
       {
         key: 'activeAge',
         label: 'Activas/antigüedad',
-        fields: {
-          green: { key: 'greenBelow', operator: '<', unit: 'min' },
-          yellow: { key: 'yellowMin', operator: '>=', unit: 'min' },
-          red: { key: 'redMin', operator: '>=', unit: 'min' }
-        }
+        directionLabel: 'Menor es mejor',
+        unit: 'min',
+        inputs: [
+          { key: 'greenBelow', label: 'Verde hasta' },
+          { key: 'redMin', label: 'Rojo desde' }
+        ]
       }
     ];
 
@@ -3995,14 +4100,68 @@
       return KPI_THRESHOLD_CONFIG_ROWS;
     }
 
-    function renderThresholdInput(row, field) {
+    function formatThresholdDisplay(value) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '-';
+      return Number.isInteger(num) ? String(num) : String(num);
+    }
+
+    function getThresholdPreviewItems(row) {
       const metricThresholds = KPI_THRESHOLDS[row.key] || DEFAULT_KPI_THRESHOLDS[row.key] || {};
-      const value = metricThresholds[field.key] ?? '';
-      const ariaLabel = `${row.label} ${field.key}`;
+      const unit = row.unit === '%' ? '%' : 'min';
+
+      if (row.key === 'onTime') {
+        const redBelow = formatThresholdDisplay(metricThresholds.redBelow);
+        const greenMin = formatThresholdDisplay(metricThresholds.greenMin);
+
+        return [
+          { tone: 'red', text: `Rojo: menor a ${redBelow} ${unit}` },
+          { tone: 'yellow', text: `Amarillo: entre ${redBelow} ${unit} y ${greenMin} ${unit}` },
+          { tone: 'green', text: `Verde: desde ${greenMin} ${unit}` }
+        ];
+      }
+
+      if (row.key === 'e2e') {
+        const greenMax = formatThresholdDisplay(metricThresholds.greenMax);
+        const redAbove = formatThresholdDisplay(metricThresholds.redAbove);
+
+        return [
+          { tone: 'green', text: `Verde: hasta ${greenMax} ${unit}` },
+          { tone: 'yellow', text: `Amarillo: entre ${greenMax} y ${redAbove} ${unit}` },
+          { tone: 'red', text: `Rojo: sobre ${redAbove} ${unit}` }
+        ];
+      }
+
+      if (row.key === 'pick' || row.key === 'delivery') {
+        const greenBelow = formatThresholdDisplay(metricThresholds.greenBelow);
+        const redAbove = formatThresholdDisplay(metricThresholds.redAbove);
+
+        return [
+          { tone: 'green', text: `Verde: hasta ${greenBelow} ${unit}` },
+          { tone: 'yellow', text: `Amarillo: entre ${greenBelow} y ${redAbove} ${unit}` },
+          { tone: 'red', text: `Rojo: sobre ${redAbove} ${unit}` }
+        ];
+      }
+
+      const greenBelow = formatThresholdDisplay(metricThresholds.greenBelow);
+      const redMin = formatThresholdDisplay(metricThresholds.redMin);
+
+      return [
+        { tone: 'green', text: `Verde: hasta ${greenBelow} ${unit}` },
+        { tone: 'yellow', text: `Amarillo: entre ${greenBelow} y ${redMin} ${unit}` },
+        { tone: 'red', text: `Rojo: desde ${redMin} ${unit}` }
+      ];
+    }
+
+    function renderThresholdInput(row, inputConfig) {
+      const metricThresholds = KPI_THRESHOLDS[row.key] || DEFAULT_KPI_THRESHOLDS[row.key] || {};
+      const value = metricThresholds[inputConfig.key] ?? '';
+      const ariaLabel = `${row.label} ${inputConfig.label}`;
 
       return `
-        <span class="threshold-input-cell">
-          <span class="threshold-operator">${escapeHtml(field.operator)}</span>
+        <div class="threshold-field">
+          <label>${escapeHtml(inputConfig.label)}</label>
+          <div class="threshold-input-wrap">
           <input
             class="threshold-input"
             type="number"
@@ -4010,25 +4169,36 @@
             step="0.1"
             value="${escapeHtml(value)}"
             data-threshold-metric="${escapeHtml(row.key)}"
-            data-threshold-key="${escapeHtml(field.key)}"
+            data-threshold-key="${escapeHtml(inputConfig.key)}"
             aria-label="${escapeHtml(ariaLabel)}"
           >
-          <span class="threshold-unit">${escapeHtml(field.unit)}</span>
-        </span>
+            <span class="threshold-unit">${escapeHtml(row.unit)}</span>
+          </div>
+        </div>
       `;
     }
 
     function renderKpiThresholdConfig() {
-      const tbody = document.getElementById('kpiThresholdRows');
-      if (!tbody) return;
+      const container = document.getElementById('kpiThresholdRows');
+      if (!container) return;
 
-      tbody.innerHTML = getThresholdConfigRows().map(row => `
-        <tr>
-          <td><strong>${escapeHtml(row.label)}</strong></td>
-          <td>${renderThresholdInput(row, row.fields.green)}</td>
-          <td>${renderThresholdInput(row, row.fields.yellow)}</td>
-          <td>${renderThresholdInput(row, row.fields.red)}</td>
-        </tr>
+      container.innerHTML = getThresholdConfigRows().map(row => `
+        <section class="threshold-item">
+          <div class="threshold-item-header">
+            <div class="threshold-item-title">${escapeHtml(row.label)}</div>
+            <div class="threshold-direction">${escapeHtml(row.directionLabel)}</div>
+          </div>
+          <div class="threshold-fields">
+            ${row.inputs.map(inputConfig => renderThresholdInput(row, inputConfig)).join('')}
+          </div>
+          <div class="threshold-preview">
+            ${getThresholdPreviewItems(row).map(item => `
+              <div class="threshold-preview-item threshold-preview-${escapeHtml(item.tone)}">
+                ${escapeHtml(item.text)}
+              </div>
+            `).join('')}
+          </div>
+        </section>
       `).join('');
     }
 
@@ -4047,13 +4217,59 @@
       return Number(rawValue);
     }
 
+    function buildThresholdSetFromInputs(metricKey) {
+      if (metricKey === 'onTime') {
+        const redBelow = readKpiThresholdInput(metricKey, 'redBelow');
+        const greenMin = readKpiThresholdInput(metricKey, 'greenMin');
+
+        if (!(redBelow < greenMin)) {
+          throw new Error('OnTime: el limite verde debe ser mayor que el limite rojo.');
+        }
+
+        return { redBelow, yellowBelow: greenMin, greenMin };
+      }
+
+      if (metricKey === 'e2e') {
+        const greenMax = readKpiThresholdInput(metricKey, 'greenMax');
+        const redAbove = readKpiThresholdInput(metricKey, 'redAbove');
+
+        if (!(greenMax < redAbove)) {
+          throw new Error('E2E: el limite rojo debe ser mayor que el limite verde.');
+        }
+
+        return { greenMax, yellowAbove: greenMax, redAbove };
+      }
+
+      if (metricKey === 'pick' || metricKey === 'delivery') {
+        const greenBelow = readKpiThresholdInput(metricKey, 'greenBelow');
+        const redAbove = readKpiThresholdInput(metricKey, 'redAbove');
+
+        if (!(greenBelow < redAbove)) {
+          throw new Error(`${metricKey}: el limite rojo debe ser mayor que el limite verde.`);
+        }
+
+        return { greenBelow, yellowMin: greenBelow, redAbove };
+      }
+
+      if (metricKey === 'activeAge') {
+        const greenBelow = readKpiThresholdInput(metricKey, 'greenBelow');
+        const redMin = readKpiThresholdInput(metricKey, 'redMin');
+
+        if (!(greenBelow < redMin)) {
+          throw new Error('Activas/antigüedad: el limite rojo debe ser mayor que el limite verde.');
+        }
+
+        return { greenBelow, yellowMin: greenBelow, redMin };
+      }
+
+      throw new Error(`KPI desconocido: ${metricKey}.`);
+    }
+
     function collectKpiThresholdInputs() {
       const next = cloneThresholds(DEFAULT_KPI_THRESHOLDS);
 
       getThresholdConfigRows().forEach(row => {
-        Object.values(row.fields).forEach(field => {
-          next[row.key][field.key] = readKpiThresholdInput(row.key, field.key);
-        });
+        next[row.key] = buildThresholdSetFromInputs(row.key);
       });
 
       return validateKpiThresholds(next);
