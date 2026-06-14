@@ -788,8 +788,117 @@
     font-weight: 700;
   }
 
+  .header-action-btn {
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .config-view {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .config-header {
+    background: var(--panel);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px;
+  }
+
+  .config-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--dark);
+    margin-bottom: 6px;
+  }
+
+  .config-subtle {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .config-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+    gap: 16px;
+    align-items: start;
+  }
+
+  .config-module {
+    background: var(--panel);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 16px;
+    border: 1px solid var(--border);
+  }
+
+  .config-module-title {
+    font-size: 17px;
+    font-weight: 800;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  .config-module-subtle {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 12px;
+    line-height: 1.35;
+  }
+
+  .threshold-table {
+    width: 100%;
+    min-width: 720px;
+  }
+
+  .threshold-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 9px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .threshold-green {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .threshold-yellow {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .threshold-red {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .config-empty-state {
+    background: var(--panel-soft);
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 16px;
+    color: #374151;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
   @media (max-width: 1080px) {
     .hero-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .config-grid {
       grid-template-columns: 1fr;
     }
 
@@ -843,17 +952,13 @@
       min-width: 0;
       margin-left: 0 !important;
       display: grid !important;
-      grid-template-columns: minmax(0, 1fr) 82px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px !important;
       align-items: stretch;
     }
 
     .header-right .user-badge {
-      grid-column: 1;
-    }
-
-    .header-right .logout-btn {
-      grid-column: 2;
+      grid-column: 1 / -1;
     }
 
     .header-right > * {
@@ -862,6 +967,7 @@
     }
 
     .user-badge,
+    .header-action-btn,
     .logout-btn {
       width: 100%;
       display: flex;
@@ -877,6 +983,7 @@
       padding: 9px 8px;
     }
 
+    .header-action-btn,
     .logout-btn {
       padding: 9px 8px;
       border-radius: 12px;
@@ -1154,10 +1261,13 @@
 
       <div class="header-right">
         <div id="userBadge" class="user-badge">Sesión activa</div>
+        <button id="dashboardNavBtn" class="header-action-btn hidden" type="button">Dashboard</button>
+        <button id="configNavBtn" class="header-action-btn hidden" type="button">⚙️ Configuración</button>
         <button id="logoutBtn" class="logout-btn" type="button">Cerrar sesión</button>
       </div>
     </header>
 
+    <div id="dashboardView">
     <div class="filters" id="filtersCard">
       <div class="mobile-filter-toggle-wrap">
         <button id="mobileFiltersToggle" class="mobile-filters-toggle" type="button">
@@ -1492,6 +1602,43 @@
         </table>
       </div>
     </div>
+    </div>
+
+    <div id="configView" class="config-view hidden">
+      <div class="config-header">
+        <div class="config-title">Configuración Admin</div>
+        <div class="config-subtle">Parámetros operacionales visibles solo para usuarios admin activos.</div>
+      </div>
+
+      <div class="config-grid">
+        <section class="config-module">
+          <div class="config-module-title">Rangos KPI</div>
+          <div class="config-module-subtle">Umbrales actuales usados para colorear el dashboard.</div>
+
+          <div class="table-scroll">
+            <table class="threshold-table">
+              <thead>
+                <tr>
+                  <th>KPI</th>
+                  <th>Verde</th>
+                  <th>Amarillo</th>
+                  <th>Rojo</th>
+                </tr>
+              </thead>
+              <tbody id="kpiThresholdRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="config-module">
+          <div class="config-module-title">Supervisores y tiendas</div>
+          <div class="config-module-subtle">Asignación operativa de tiendas por supervisor.</div>
+          <div class="config-empty-state">
+            Este módulo requiere conexión con Supabase para guardar asignaciones de tiendas por supervisor.
+          </div>
+        </section>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1505,6 +1652,34 @@
     const API_URL_LIVE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-read-live';
     const API_URL_SYNC = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-sync';
     const API_URL_HISTORY_COMPARE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-history-compare';
+
+    const KPI_THRESHOLDS = {
+      onTime: {
+        redBelow: 80,
+        yellowBelow: 85,
+        greenMin: 85
+      },
+      e2e: {
+        greenMax: 43,
+        yellowAbove: 43,
+        redAbove: 50
+      },
+      pick: {
+        greenBelow: 20,
+        yellowMin: 20,
+        redAbove: 30
+      },
+      delivery: {
+        greenBelow: 12,
+        yellowMin: 12,
+        redAbove: 18
+      },
+      activeAge: {
+        greenBelow: 31,
+        yellowMin: 31,
+        redMin: 43
+      }
+    };
 
     let currentMode = 'today_live';
     let currentRows = [];
@@ -1539,6 +1714,7 @@
     let compareView = 'both';
     let currentSession = null;
     let currentProfile = null;
+    let currentAppView = 'dashboard';
 
     function isMobileView() {
       return window.innerWidth <= 768;
@@ -2062,34 +2238,38 @@
     }
 
     function getOnTimeClass(value) {
-  const num = Number(value);
-  if (Number.isNaN(num)) return '';
-  if (num < 80) return 'pill pill-red';
-  if (num < 85) return 'pill pill-yellow';
-  return 'pill pill-green';
-}
+      const num = Number(value);
+      const thresholds = KPI_THRESHOLDS.onTime;
+      if (Number.isNaN(num)) return '';
+      if (num < thresholds.redBelow) return 'pill pill-red';
+      if (num < thresholds.yellowBelow) return 'pill pill-yellow';
+      return 'pill pill-green';
+    }
 
-function getE2EClass(value) {
-  const num = Number(value);
-  if (Number.isNaN(num)) return '';
-  if (num > 50) return 'metric-red';
-  if (num > 43) return 'metric-yellow';
-  return 'metric-green';
-}
+    function getE2EClass(value) {
+      const num = Number(value);
+      const thresholds = KPI_THRESHOLDS.e2e;
+      if (Number.isNaN(num)) return '';
+      if (num > thresholds.redAbove) return 'metric-red';
+      if (num > thresholds.yellowAbove) return 'metric-yellow';
+      return 'metric-green';
+    }
 
     function getPickClass(value) {
       const num = Number(value);
+      const thresholds = KPI_THRESHOLDS.pick;
       if (Number.isNaN(num)) return '';
-      if (num > 30) return 'metric-red';
-      if (num >= 20) return 'metric-yellow';
+      if (num > thresholds.redAbove) return 'metric-red';
+      if (num >= thresholds.yellowMin) return 'metric-yellow';
       return 'metric-green';
     }
 
     function getDeliveryClass(value) {
       const num = Number(value);
+      const thresholds = KPI_THRESHOLDS.delivery;
       if (Number.isNaN(num)) return '';
-      if (num > 18) return 'metric-red';
-      if (num >= 12) return 'metric-yellow';
+      if (num > thresholds.redAbove) return 'metric-red';
+      if (num >= thresholds.yellowMin) return 'metric-yellow';
       return 'metric-green';
     }
 
@@ -2125,12 +2305,13 @@ function getE2EClass(value) {
     }
 
     function getActiveRiskLevel(value) {
-  const num = Number(value);
-  if (Number.isNaN(num)) return 'neutral';
-  if (num >= 43) return 'red';
-  if (num >= 31) return 'yellow';
-  return 'green';
-}
+      const num = Number(value);
+      const thresholds = KPI_THRESHOLDS.activeAge;
+      if (Number.isNaN(num)) return 'neutral';
+      if (num >= thresholds.redMin) return 'red';
+      if (num >= thresholds.yellowMin) return 'yellow';
+      return 'green';
+    }
 
     function getActiveAgeClass(value) {
       const level = getActiveRiskLevel(value);
@@ -2587,8 +2768,8 @@ function getE2EClass(value) {
       document.getElementById('summaryPromise').textContent = stats.promiseAvg !== null ? formatNumber(stats.promiseAvg, 1) : '-';
       document.getElementById('summaryOnTime').textContent = stats.onTimeAvg !== null ? formatPercent(stats.onTimeAvg) : '-';
 
-      setSummaryThresholdClass('summaryE2E', stats.e2eAvg, value => value <= 43);
-      setSummaryThresholdClass('summaryOnTime', stats.onTimeAvg, value => value >= 85);
+      setSummaryThresholdClass('summaryE2E', stats.e2eAvg, value => value <= KPI_THRESHOLDS.e2e.greenMax);
+      setSummaryThresholdClass('summaryOnTime', stats.onTimeAvg, value => value >= KPI_THRESHOLDS.onTime.greenMin);
       updateActiveOrdersCard(rows);
 
       if (activeOrdersPanelOpen) {
@@ -3567,6 +3748,88 @@ function getE2EClass(value) {
       }
     }
 
+    function getThresholdConfigRows() {
+      const { onTime, e2e, pick, delivery, activeAge } = KPI_THRESHOLDS;
+
+      return [
+        {
+          label: 'OnTime',
+          green: `>= ${onTime.greenMin}%`,
+          yellow: `>= ${onTime.redBelow}% y < ${onTime.yellowBelow}%`,
+          red: `< ${onTime.redBelow}%`
+        },
+        {
+          label: 'E2E',
+          green: `<= ${e2e.greenMax} min`,
+          yellow: `> ${e2e.yellowAbove} y <= ${e2e.redAbove} min`,
+          red: `> ${e2e.redAbove} min`
+        },
+        {
+          label: 'Pick',
+          green: `< ${pick.greenBelow} min`,
+          yellow: `>= ${pick.yellowMin} y <= ${pick.redAbove} min`,
+          red: `> ${pick.redAbove} min`
+        },
+        {
+          label: 'Delivery',
+          green: `< ${delivery.greenBelow} min`,
+          yellow: `>= ${delivery.yellowMin} y <= ${delivery.redAbove} min`,
+          red: `> ${delivery.redAbove} min`
+        },
+        {
+          label: 'Activas/antigüedad',
+          green: `< ${activeAge.greenBelow} min`,
+          yellow: `>= ${activeAge.yellowMin} y < ${activeAge.redMin} min`,
+          red: `>= ${activeAge.redMin} min`
+        }
+      ];
+    }
+
+    function renderKpiThresholdConfig() {
+      const tbody = document.getElementById('kpiThresholdRows');
+      if (!tbody) return;
+
+      tbody.innerHTML = getThresholdConfigRows().map(row => `
+        <tr>
+          <td><strong>${row.label}</strong></td>
+          <td><span class="threshold-chip threshold-green">${row.green}</span></td>
+          <td><span class="threshold-chip threshold-yellow">${row.yellow}</span></td>
+          <td><span class="threshold-chip threshold-red">${row.red}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function updateAdminNavigation() {
+      const isAdminActive = isAdminActiveProfile(currentProfile);
+      const configBtn = document.getElementById('configNavBtn');
+      const dashboardBtn = document.getElementById('dashboardNavBtn');
+
+      if (configBtn) {
+        configBtn.classList.toggle('hidden', !isAdminActive || currentAppView === 'config');
+      }
+
+      if (dashboardBtn) {
+        dashboardBtn.classList.toggle('hidden', !isAdminActive || currentAppView !== 'config');
+      }
+    }
+
+    function showDashboardView() {
+      currentAppView = 'dashboard';
+      document.getElementById('dashboardView')?.classList.remove('hidden');
+      document.getElementById('configView')?.classList.add('hidden');
+      updateAdminNavigation();
+    }
+
+    function showConfigView() {
+      if (!isAdminActiveProfile(currentProfile)) return;
+
+      currentAppView = 'config';
+      document.getElementById('dashboardView')?.classList.add('hidden');
+      document.getElementById('configView')?.classList.remove('hidden');
+      renderKpiThresholdConfig();
+      updateAdminNavigation();
+    }
+
     function isAdminActiveProfile(profile) {
       return profile?.role === 'admin' && profile?.active === true;
     }
@@ -3574,6 +3837,11 @@ function getE2EClass(value) {
     function showLoginView(message = '') {
       currentSession = null;
       currentProfile = null;
+      currentAppView = 'dashboard';
+      document.getElementById('dashboardView')?.classList.remove('hidden');
+      document.getElementById('configView')?.classList.add('hidden');
+      document.getElementById('configNavBtn')?.classList.add('hidden');
+      document.getElementById('dashboardNavBtn')?.classList.add('hidden');
       document.getElementById('appView').style.display = 'none';
       document.getElementById('loginView').style.display = 'flex';
       document.getElementById('loginError').textContent = message;
@@ -3673,7 +3941,14 @@ function getE2EClass(value) {
       document.getElementById('loginView').style.display = 'none';
       document.getElementById('appView').style.display = 'block';
       await updateUserBadge();
-      await loadDashboard();
+
+      if (currentAppView === 'config') {
+        showConfigView();
+      } else {
+        showDashboardView();
+        await loadDashboard();
+      }
+
       return true;
     }
 
@@ -3732,6 +4007,8 @@ function getE2EClass(value) {
     document.getElementById('hour_band').addEventListener('change', applyHourBand);
     document.getElementById('loadBtn').addEventListener('click', loadDashboard);
     document.getElementById('loginBtn').addEventListener('click', signIn);
+    document.getElementById('dashboardNavBtn').addEventListener('click', showDashboardView);
+    document.getElementById('configNavBtn').addEventListener('click', showConfigView);
     document.getElementById('logoutBtn').addEventListener('click', signOut);
     document.getElementById('activeOrdersCard').addEventListener('click', toggleActiveOrdersPanel);
     document.getElementById('activeOrdersCard').addEventListener('keydown', (e) => {
