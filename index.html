@@ -1022,6 +1022,81 @@
     line-height: 1.45;
   }
 
+  .store-access-controls {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(180px, 0.8fr);
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .store-access-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .store-access-field label {
+    color: #374151;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .store-access-summary {
+    background: var(--panel-soft);
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+  }
+
+  .store-access-list {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  .store-access-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .store-access-row:first-child {
+    border-top: none;
+  }
+
+  .store-access-row input {
+    margin-top: 2px;
+    flex: 0 0 auto;
+  }
+
+  .store-access-name {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .store-access-uuid {
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 2px;
+    overflow-wrap: anywhere;
+  }
+
+  .store-access-empty {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 12px;
+  }
+
   @media (max-width: 1080px) {
     .hero-layout {
       grid-template-columns: 1fr;
@@ -1060,6 +1135,10 @@
 
     .threshold-input {
       max-width: none;
+    }
+
+    .store-access-controls {
+      grid-template-columns: 1fr;
     }
 
     .app-header {
@@ -1773,8 +1852,27 @@
         <section class="config-module">
           <div class="config-module-title">Supervisores y tiendas</div>
           <div class="config-module-subtle">Asignación operativa de tiendas por supervisor.</div>
-          <div class="config-empty-state">
-            Este módulo requiere conexión con Supabase para guardar asignaciones de tiendas por supervisor.
+          <div class="store-access-controls">
+            <div class="store-access-field">
+              <label for="storeAccessSupervisorSelect">Supervisor</label>
+              <select id="storeAccessSupervisorSelect">
+                <option value="">Cargando supervisores...</option>
+              </select>
+            </div>
+            <div class="store-access-field">
+              <label for="storeAccessSearch">Buscar tienda</label>
+              <input id="storeAccessSearch" type="search" placeholder="Nombre de tienda">
+            </div>
+          </div>
+
+          <div id="storeAccessSummary" class="store-access-summary">Selecciona un supervisor para ver sus tiendas.</div>
+          <div id="storeAccessList" class="store-access-list">
+            <div class="store-access-empty">Cargando tiendas...</div>
+          </div>
+
+          <div class="config-actions">
+            <button id="saveStoreAccessBtn" class="config-save-btn" type="button" disabled>Guardar asignación</button>
+            <div id="storeAccessStatus" class="config-status" aria-live="polite"></div>
           </div>
         </section>
       </div>
@@ -1793,6 +1891,7 @@
     const API_URL_SYNC = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-sync';
     const API_URL_HISTORY_COMPARE = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/captain-kpi-history-compare';
     const API_URL_KPI_THRESHOLDS = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/dashboard-kpi-thresholds';
+    const API_URL_STORE_ACCESS = 'https://dglgdgdujvjglnpeazhw.supabase.co/functions/v1/dashboard-store-access';
 
     const DEFAULT_KPI_THRESHOLDS = {
       onTime: {
@@ -1911,6 +2010,13 @@
     let currentSession = null;
     let currentProfile = null;
     let currentAppView = 'dashboard';
+    let storeAccessLoaded = false;
+    let storeAccessLoading = false;
+    let storeAccessSupervisors = [];
+    let storeAccessStores = [];
+    let storeAccessAssignments = [];
+    let selectedStoreAccessSupervisorId = '';
+    let selectedStoreAccessStoreUuids = new Set();
 
     function isMobileView() {
       return window.innerWidth <= 768;
@@ -4328,6 +4434,300 @@
       }
     }
 
+    function setStoreAccessStatus(message = '', type = '') {
+      const status = document.getElementById('storeAccessStatus');
+      if (!status) return;
+      status.textContent = message;
+      status.className = 'config-status';
+      if (type) status.classList.add(type);
+    }
+
+    function getSupervisorLabel(supervisor) {
+      const name = String(supervisor?.full_name || '').trim();
+      const email = String(supervisor?.email || '').trim();
+      const baseLabel = name && email ? `${name} (${email})` : name || email || supervisor?.id || 'Supervisor';
+      const inactive = supervisor?.active === false || supervisor?.is_active === false;
+      return inactive ? `${baseLabel} - inactivo` : baseLabel;
+    }
+
+    function getAssignmentsForSupervisor(supervisorId) {
+      return new Set(
+        storeAccessAssignments
+          .filter(assignment => assignment.user_id === supervisorId)
+          .map(assignment => assignment.store_uuid)
+      );
+    }
+
+    function updateStoreAccessSummary() {
+      const summary = document.getElementById('storeAccessSummary');
+      const saveBtn = document.getElementById('saveStoreAccessBtn');
+      if (!summary) return;
+
+      if (storeAccessLoaded && storeAccessSupervisors.length === 0) {
+        summary.textContent = 'No hay supervisores disponibles para asignar tiendas.';
+        if (saveBtn) saveBtn.disabled = true;
+        return;
+      }
+
+      if (!selectedStoreAccessSupervisorId) {
+        summary.textContent = 'Selecciona un supervisor para editar sus tiendas.';
+        if (saveBtn) saveBtn.disabled = true;
+        return;
+      }
+
+      const selectedCount = selectedStoreAccessStoreUuids.size;
+      const totalCount = storeAccessStores.length;
+      summary.textContent = `${selectedCount} de ${totalCount} tiendas seleccionadas.`;
+      if (saveBtn) saveBtn.disabled = storeAccessLoading;
+    }
+
+    function renderStoreAccessSupervisors() {
+      const select = document.getElementById('storeAccessSupervisorSelect');
+      if (!select) return;
+
+      const currentValue = selectedStoreAccessSupervisorId || select.value;
+      const hasCurrentValue = storeAccessSupervisors.some(supervisor => supervisor.id === currentValue);
+      selectedStoreAccessSupervisorId = hasCurrentValue ? currentValue : '';
+
+      select.innerHTML = [
+        '<option value="">Selecciona un supervisor</option>',
+        ...storeAccessSupervisors.map(supervisor => `
+          <option value="${escapeHtml(supervisor.id)}"${supervisor.id === selectedStoreAccessSupervisorId ? ' selected' : ''}>
+            ${escapeHtml(getSupervisorLabel(supervisor))}
+          </option>
+        `)
+      ].join('');
+    }
+
+    function getFilteredStoreAccessStores() {
+      const searchValue = document.getElementById('storeAccessSearch')?.value || '';
+      const normalizedSearch = normalizeStoreText(searchValue);
+
+      if (!normalizedSearch) return storeAccessStores;
+
+      return storeAccessStores.filter(store =>
+        normalizeStoreText(store.store_name).includes(normalizedSearch) ||
+        normalizeStoreText(store.store_uuid).includes(normalizedSearch)
+      );
+    }
+
+    function renderStoreAccessStores() {
+      const list = document.getElementById('storeAccessList');
+      if (!list) return;
+
+      if (storeAccessLoading) {
+        list.innerHTML = '<div class="store-access-empty">Cargando tiendas...</div>';
+        updateStoreAccessSummary();
+        return;
+      }
+
+      if (!storeAccessLoaded) {
+        list.innerHTML = '<div class="store-access-empty">Carga la configuración para ver las tiendas.</div>';
+        updateStoreAccessSummary();
+        return;
+      }
+
+      const filteredStores = getFilteredStoreAccessStores();
+
+      if (filteredStores.length === 0) {
+        list.innerHTML = '<div class="store-access-empty">No hay tiendas activas que coincidan con la búsqueda.</div>';
+        updateStoreAccessSummary();
+        return;
+      }
+
+      const disabledAttr = selectedStoreAccessSupervisorId ? '' : ' disabled';
+
+      list.innerHTML = filteredStores.map(store => {
+        const storeUuid = String(store.store_uuid || '');
+        const checkedAttr = selectedStoreAccessStoreUuids.has(storeUuid) ? ' checked' : '';
+
+        return `
+          <label class="store-access-row">
+            <input
+              type="checkbox"
+              data-store-access-uuid="${escapeHtml(storeUuid)}"
+              ${checkedAttr}${disabledAttr}
+            >
+            <span>
+              <span class="store-access-name">${escapeHtml(store.store_name || storeUuid)}</span>
+              <span class="store-access-uuid">${escapeHtml(storeUuid)}</span>
+            </span>
+          </label>
+        `;
+      }).join('');
+
+      updateStoreAccessSummary();
+    }
+
+    function renderStoreAccessConfig() {
+      renderStoreAccessSupervisors();
+
+      if (selectedStoreAccessSupervisorId) {
+        selectedStoreAccessStoreUuids = getAssignmentsForSupervisor(selectedStoreAccessSupervisorId);
+      } else {
+        selectedStoreAccessStoreUuids = new Set();
+      }
+
+      renderStoreAccessStores();
+    }
+
+    async function loadStoreAccessConfig() {
+      if (!isAdminActiveProfile(currentProfile) || storeAccessLoading) return;
+
+      storeAccessLoading = true;
+      setStoreAccessStatus('Cargando supervisores y tiendas...');
+      renderStoreAccessStores();
+
+      try {
+        const headers = await getAuthHeaders();
+
+        if (!headers.Authorization) {
+          throw new Error('Sesion no disponible.');
+        }
+
+        const res = await fetch(API_URL_STORE_ACCESS, {
+          method: 'GET',
+          cache: 'no-store',
+          headers
+        });
+
+        const payload = await res.json().catch(() => null);
+
+        if (!res.ok || !payload?.ok) {
+          throw new Error(payload?.error || 'No se pudo cargar la configuración de tiendas.');
+        }
+
+        storeAccessSupervisors = Array.isArray(payload.supervisors) ? payload.supervisors : [];
+        storeAccessStores = Array.isArray(payload.stores) ? payload.stores : [];
+        storeAccessAssignments = Array.isArray(payload.assignments) ? payload.assignments : [];
+        storeAccessLoaded = true;
+
+        const supervisorStillExists = storeAccessSupervisors.some(
+          supervisor => supervisor.id === selectedStoreAccessSupervisorId
+        );
+        if (!supervisorStillExists) {
+          selectedStoreAccessSupervisorId = '';
+        }
+
+        renderStoreAccessConfig();
+        setStoreAccessStatus('');
+      } catch (error) {
+        console.error('Error cargando asignaciones de tiendas:', error);
+        storeAccessLoaded = false;
+        storeAccessSupervisors = [];
+        storeAccessStores = [];
+        storeAccessAssignments = [];
+        selectedStoreAccessSupervisorId = '';
+        selectedStoreAccessStoreUuids = new Set();
+        renderStoreAccessSupervisors();
+        renderStoreAccessStores();
+        setStoreAccessStatus(error.message || 'No se pudo cargar la configuración de tiendas.', 'error');
+      } finally {
+        storeAccessLoading = false;
+        renderStoreAccessStores();
+      }
+    }
+
+    function handleStoreAccessSupervisorChange() {
+      const select = document.getElementById('storeAccessSupervisorSelect');
+      selectedStoreAccessSupervisorId = select?.value || '';
+      selectedStoreAccessStoreUuids = selectedStoreAccessSupervisorId
+        ? getAssignmentsForSupervisor(selectedStoreAccessSupervisorId)
+        : new Set();
+      setStoreAccessStatus();
+      renderStoreAccessStores();
+    }
+
+    function handleStoreAccessSearch() {
+      renderStoreAccessStores();
+    }
+
+    function handleStoreAccessListChange(event) {
+      const checkbox = event.target;
+      const storeUuid = checkbox?.dataset?.storeAccessUuid;
+
+      if (!storeUuid) return;
+
+      if (checkbox.checked) {
+        selectedStoreAccessStoreUuids.add(storeUuid);
+      } else {
+        selectedStoreAccessStoreUuids.delete(storeUuid);
+      }
+
+      updateStoreAccessSummary();
+      setStoreAccessStatus();
+    }
+
+    async function saveStoreAccessAssignment() {
+      if (!isAdminActiveProfile(currentProfile)) return;
+
+      const saveBtn = document.getElementById('saveStoreAccessBtn');
+
+      try {
+        if (!selectedStoreAccessSupervisorId) {
+          throw new Error('Selecciona un supervisor.');
+        }
+
+        const headers = await getAuthHeaders();
+
+        if (!headers.Authorization) {
+          throw new Error('Sesion no disponible.');
+        }
+
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.textContent = 'Guardando...';
+        }
+
+        setStoreAccessStatus('Guardando asignación...');
+
+        const storeUuids = Array.from(selectedStoreAccessStoreUuids);
+        const res = await fetch(API_URL_STORE_ACCESS, {
+          method: 'PUT',
+          cache: 'no-store',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            supervisorId: selectedStoreAccessSupervisorId,
+            storeUuids
+          })
+        });
+
+        const payload = await res.json().catch(() => null);
+
+        if (!res.ok || !payload?.ok) {
+          throw new Error(payload?.error || 'No se pudo guardar la asignación.');
+        }
+
+        const updatedAssignments = Array.isArray(payload.assignments)
+          ? payload.assignments
+          : storeUuids.map(storeUuid => ({
+              user_id: selectedStoreAccessSupervisorId,
+              store_uuid: storeUuid
+            }));
+
+        storeAccessAssignments = [
+          ...storeAccessAssignments.filter(
+            assignment => assignment.user_id !== selectedStoreAccessSupervisorId
+          ),
+          ...updatedAssignments
+        ];
+        selectedStoreAccessStoreUuids = getAssignmentsForSupervisor(selectedStoreAccessSupervisorId);
+        renderStoreAccessStores();
+        setStoreAccessStatus('Asignación guardada.', 'success');
+      } catch (error) {
+        setStoreAccessStatus(error.message || 'No se pudo guardar la asignación.', 'error');
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Guardar asignación';
+        }
+        updateStoreAccessSummary();
+      }
+    }
+
     function updateAdminNavigation() {
       const isAdminActive = isAdminActiveProfile(currentProfile);
       const configBtn = document.getElementById('configNavBtn');
@@ -4357,6 +4757,7 @@
       document.getElementById('configView')?.classList.remove('hidden');
       renderKpiThresholdConfig();
       setKpiThresholdStatus();
+      loadStoreAccessConfig();
       updateAdminNavigation();
     }
 
@@ -4369,7 +4770,15 @@
       currentProfile = null;
       currentAppView = 'dashboard';
       KPI_THRESHOLDS = cloneThresholds(DEFAULT_KPI_THRESHOLDS);
+      storeAccessLoaded = false;
+      storeAccessLoading = false;
+      storeAccessSupervisors = [];
+      storeAccessStores = [];
+      storeAccessAssignments = [];
+      selectedStoreAccessSupervisorId = '';
+      selectedStoreAccessStoreUuids = new Set();
       setKpiThresholdStatus();
+      setStoreAccessStatus();
       document.getElementById('dashboardView')?.classList.remove('hidden');
       document.getElementById('configView')?.classList.add('hidden');
       document.getElementById('configNavBtn')?.classList.add('hidden');
@@ -4544,6 +4953,10 @@
     document.getElementById('dashboardNavBtn').addEventListener('click', showDashboardView);
     document.getElementById('configNavBtn').addEventListener('click', showConfigView);
     document.getElementById('saveKpiThresholdsBtn').addEventListener('click', saveKpiThresholds);
+    document.getElementById('storeAccessSupervisorSelect').addEventListener('change', handleStoreAccessSupervisorChange);
+    document.getElementById('storeAccessSearch').addEventListener('input', handleStoreAccessSearch);
+    document.getElementById('storeAccessList').addEventListener('change', handleStoreAccessListChange);
+    document.getElementById('saveStoreAccessBtn').addEventListener('click', saveStoreAccessAssignment);
     document.getElementById('logoutBtn').addEventListener('click', signOut);
     document.getElementById('activeOrdersCard').addEventListener('click', toggleActiveOrdersPanel);
     document.getElementById('activeOrdersCard').addEventListener('keydown', (e) => {
