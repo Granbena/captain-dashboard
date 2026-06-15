@@ -1083,13 +1083,6 @@
     line-height: 1.25;
   }
 
-  .store-access-uuid {
-    color: var(--muted);
-    font-size: 11px;
-    margin-top: 2px;
-    overflow-wrap: anywhere;
-  }
-
   .store-access-empty {
     color: var(--muted);
     font-size: 13px;
@@ -1865,7 +1858,7 @@
             </div>
           </div>
 
-          <div id="storeAccessSummary" class="store-access-summary">Selecciona un supervisor para ver sus tiendas.</div>
+          <div id="storeAccessSummary" class="store-access-summary">Selecciona un supervisor para ver y editar sus tiendas asignadas.</div>
           <div id="storeAccessList" class="store-access-list">
             <div class="store-access-empty">Cargando tiendas...</div>
           </div>
@@ -4470,14 +4463,16 @@
       }
 
       if (!selectedStoreAccessSupervisorId) {
-        summary.textContent = 'Selecciona un supervisor para editar sus tiendas.';
+        summary.textContent = 'Selecciona un supervisor para ver y editar sus tiendas asignadas.';
         if (saveBtn) saveBtn.disabled = true;
         return;
       }
 
       const selectedCount = selectedStoreAccessStoreUuids.size;
       const totalCount = storeAccessStores.length;
-      summary.textContent = `${selectedCount} de ${totalCount} tiendas seleccionadas.`;
+      const supervisor = storeAccessSupervisors.find(item => item.id === selectedStoreAccessSupervisorId);
+      const supervisorLabel = getSupervisorLabel(supervisor);
+      summary.textContent = `${selectedCount} de ${totalCount} tiendas asignadas a ${supervisorLabel}.`;
       if (saveBtn) saveBtn.disabled = storeAccessLoading;
     }
 
@@ -4527,6 +4522,12 @@
         return;
       }
 
+      if (!selectedStoreAccessSupervisorId) {
+        list.innerHTML = '<div class="store-access-empty">Selecciona un supervisor para ver y editar sus tiendas asignadas.</div>';
+        updateStoreAccessSummary();
+        return;
+      }
+
       const filteredStores = getFilteredStoreAccessStores();
 
       if (filteredStores.length === 0) {
@@ -4534,8 +4535,6 @@
         updateStoreAccessSummary();
         return;
       }
-
-      const disabledAttr = selectedStoreAccessSupervisorId ? '' : ' disabled';
 
       list.innerHTML = filteredStores.map(store => {
         const storeUuid = String(store.store_uuid || '');
@@ -4546,11 +4545,10 @@
             <input
               type="checkbox"
               data-store-access-uuid="${escapeHtml(storeUuid)}"
-              ${checkedAttr}${disabledAttr}
+              ${checkedAttr}
             >
             <span>
               <span class="store-access-name">${escapeHtml(store.store_name || storeUuid)}</span>
-              <span class="store-access-uuid">${escapeHtml(storeUuid)}</span>
             </span>
           </label>
         `;
