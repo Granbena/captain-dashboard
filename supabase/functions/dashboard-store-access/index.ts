@@ -144,7 +144,7 @@ async function readStoreAccessConfig(adminClient: ReturnType<typeof createClient
   ] = await Promise.all([
     adminClient
       .from("profiles")
-      .select("id, email, full_name, role, active, is_active:active")
+      .select("id, email, full_name, role, active, is_active")
       .eq("role", "supervisor")
       .order("email", { ascending: true }),
     adminClient
