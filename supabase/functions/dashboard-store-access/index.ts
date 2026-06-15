@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, PUT, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, PUT, PATCH, OPTIONS",
   "Content-Type": "application/json",
   "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
   "Pragma": "no-cache",
@@ -22,6 +22,11 @@ type UserAccess = {
 type StoreAccessPayload = {
   supervisorId: string;
   storeUuids: string[];
+};
+
+type SupervisorActivePayload = {
+  supervisorId: string;
+  active: boolean;
 };
 
 function json(data: unknown, status = 200) {
@@ -72,6 +77,29 @@ function parseStoreAccessPayload(body: unknown): StoreAccessPayload {
   return {
     supervisorId,
     storeUuids: [...new Set(body.storeUuids.map(normalizeStoreUuid))],
+  };
+}
+
+function parseSupervisorActivePayload(body: unknown): SupervisorActivePayload {
+  if (!isRecord(body)) {
+    throw new Error("Invalid JSON body");
+  }
+
+  const supervisorId = typeof body.supervisorId === "string"
+    ? body.supervisorId.trim()
+    : "";
+
+  if (!supervisorId) {
+    throw new Error("Invalid supervisorId");
+  }
+
+  if (typeof body.active !== "boolean") {
+    throw new Error("Invalid active payload");
+  }
+
+  return {
+    supervisorId,
+    active: body.active,
   };
 }
 
@@ -265,6 +293,33 @@ async function replaceSupervisorAssignments(
   return assignments || [];
 }
 
+async function updateSupervisorActiveState(
+  adminClient: ReturnType<typeof createClient>,
+  supervisorId: string,
+  active: boolean
+) {
+  const { data: supervisor, error } = await adminClient
+    .from("profiles")
+    .update({
+      active,
+      is_active: active,
+    })
+    .eq("id", supervisorId)
+    .eq("role", "supervisor")
+    .select("id, email, full_name, role, active, is_active")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Error updating supervisor: ${error.message}`);
+  }
+
+  if (!supervisor) {
+    throw new Error("Supervisor not found");
+  }
+
+  return supervisor;
+}
+
 function errorStatus(message: string) {
   if (message === "Missing bearer token" || message === "Invalid or expired session") {
     return 401;
@@ -285,6 +340,7 @@ function errorStatus(message: string) {
   if (
     message === "Invalid JSON body" ||
     message === "Invalid supervisorId" ||
+    message === "Invalid active payload" ||
     message === "Invalid storeUuids payload" ||
     message === "Selected user is not a supervisor" ||
     message.startsWith("Invalid or inactive stores")
@@ -334,6 +390,22 @@ serve(async (req) => {
       );
 
       return json({ ok: true, supervisorId: payload.supervisorId, assignments });
+    }
+
+    if (req.method === "PATCH") {
+      const body = await req.json().catch(() => {
+        throw new Error("Invalid JSON body");
+      });
+      const payload = parseSupervisorActivePayload(body);
+
+      await validateSupervisor(adminClient, payload.supervisorId);
+      const supervisor = await updateSupervisorActiveState(
+        adminClient,
+        payload.supervisorId,
+        payload.active
+      );
+
+      return json({ ok: true, supervisor });
     }
 
     return json({ ok: false, error: "Method not allowed" }, 405);

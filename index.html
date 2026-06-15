@@ -1052,6 +1052,57 @@
     padding: 10px 12px;
   }
 
+  .supervisor-state-panel {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+  }
+
+  .supervisor-state-copy {
+    color: #374151;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .supervisor-state-badge {
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 900;
+    padding: 5px 9px;
+  }
+
+  .supervisor-state-badge.active {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .supervisor-state-badge.inactive {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .supervisor-toggle-btn {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    color: #111827;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 9px 12px;
+  }
+
+  .supervisor-toggle-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
+
   .store-access-list {
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -1132,6 +1183,11 @@
 
     .store-access-controls {
       grid-template-columns: 1fr;
+    }
+
+    .supervisor-state-panel {
+      align-items: flex-start;
+      flex-direction: column;
     }
 
     .app-header {
@@ -1856,6 +1912,13 @@
               <label for="storeAccessSearch">Buscar tienda</label>
               <input id="storeAccessSearch" type="search" placeholder="Nombre de tienda">
             </div>
+          </div>
+
+          <div id="supervisorStatePanel" class="supervisor-state-panel hidden">
+            <div class="supervisor-state-copy">
+              Estado: <span id="supervisorStateBadge" class="supervisor-state-badge inactive">Inactivo</span>
+            </div>
+            <button id="toggleSupervisorActiveBtn" class="supervisor-toggle-btn" type="button">Activar supervisor</button>
           </div>
 
           <div id="storeAccessSummary" class="store-access-summary">Selecciona un supervisor para ver y editar sus tiendas asignadas.</div>
@@ -4443,6 +4506,36 @@
       return inactive ? `${baseLabel} - inactivo` : baseLabel;
     }
 
+    function getSelectedStoreAccessSupervisor() {
+      return storeAccessSupervisors.find(item => item.id === selectedStoreAccessSupervisorId) || null;
+    }
+
+    function isSupervisorCurrentlyActive(supervisor) {
+      return supervisor?.active === true && supervisor?.is_active !== false;
+    }
+
+    function renderSupervisorActiveControls() {
+      const panel = document.getElementById('supervisorStatePanel');
+      const badge = document.getElementById('supervisorStateBadge');
+      const toggleBtn = document.getElementById('toggleSupervisorActiveBtn');
+      if (!panel || !badge || !toggleBtn) return;
+
+      const supervisor = getSelectedStoreAccessSupervisor();
+
+      if (!supervisor) {
+        panel.classList.add('hidden');
+        toggleBtn.disabled = true;
+        return;
+      }
+
+      const isActive = isSupervisorCurrentlyActive(supervisor);
+      panel.classList.remove('hidden');
+      badge.textContent = isActive ? 'Activo' : 'Inactivo';
+      badge.className = `supervisor-state-badge ${isActive ? 'active' : 'inactive'}`;
+      toggleBtn.textContent = isActive ? 'Desactivar supervisor' : 'Activar supervisor';
+      toggleBtn.disabled = storeAccessLoading;
+    }
+
     function getAssignmentsForSupervisor(supervisorId) {
       return new Set(
         storeAccessAssignments
@@ -4559,6 +4652,7 @@
 
     function renderStoreAccessConfig() {
       renderStoreAccessSupervisors();
+      renderSupervisorActiveControls();
 
       if (selectedStoreAccessSupervisorId) {
         selectedStoreAccessStoreUuids = getAssignmentsForSupervisor(selectedStoreAccessSupervisorId);
@@ -4618,10 +4712,12 @@
         selectedStoreAccessSupervisorId = '';
         selectedStoreAccessStoreUuids = new Set();
         renderStoreAccessSupervisors();
+        renderSupervisorActiveControls();
         renderStoreAccessStores();
         setStoreAccessStatus(error.message || 'No se pudo cargar la configuración de tiendas.', 'error');
       } finally {
         storeAccessLoading = false;
+        renderSupervisorActiveControls();
         renderStoreAccessStores();
       }
     }
@@ -4633,6 +4729,7 @@
         ? getAssignmentsForSupervisor(selectedStoreAccessSupervisorId)
         : new Set();
       setStoreAccessStatus();
+      renderSupervisorActiveControls();
       renderStoreAccessStores();
     }
 
@@ -4654,6 +4751,72 @@
 
       updateStoreAccessSummary();
       setStoreAccessStatus();
+    }
+
+    async function toggleSupervisorActiveState() {
+      if (!isAdminActiveProfile(currentProfile)) return;
+
+      const supervisor = getSelectedStoreAccessSupervisor();
+      const toggleBtn = document.getElementById('toggleSupervisorActiveBtn');
+
+      try {
+        if (!supervisor) {
+          throw new Error('Selecciona un supervisor.');
+        }
+
+        const headers = await getAuthHeaders();
+
+        if (!headers.Authorization) {
+          throw new Error('Sesion no disponible.');
+        }
+
+        const nextActive = !isSupervisorCurrentlyActive(supervisor);
+
+        if (toggleBtn) {
+          toggleBtn.disabled = true;
+          toggleBtn.textContent = 'Guardando...';
+        }
+
+        setStoreAccessStatus('Guardando estado del supervisor...');
+
+        const res = await fetch(API_URL_STORE_ACCESS, {
+          method: 'PATCH',
+          cache: 'no-store',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            supervisorId: selectedStoreAccessSupervisorId,
+            active: nextActive
+          })
+        });
+
+        const payload = await res.json().catch(() => null);
+
+        if (!res.ok || !payload?.ok) {
+          throw new Error(payload?.error || 'No se pudo actualizar el supervisor.');
+        }
+
+        const updatedSupervisor = payload.supervisor || {
+          ...supervisor,
+          active: nextActive,
+          is_active: nextActive
+        };
+
+        storeAccessSupervisors = storeAccessSupervisors.map(item =>
+          item.id === updatedSupervisor.id ? { ...item, ...updatedSupervisor } : item
+        );
+
+        renderStoreAccessSupervisors();
+        renderSupervisorActiveControls();
+        updateStoreAccessSummary();
+        setStoreAccessStatus('Supervisor actualizado.', 'success');
+      } catch (error) {
+        setStoreAccessStatus(error.message || 'No se pudo actualizar el supervisor.', 'error');
+      } finally {
+        renderSupervisorActiveControls();
+      }
     }
 
     async function saveStoreAccessAssignment() {
@@ -4954,6 +5117,7 @@
     document.getElementById('storeAccessSupervisorSelect').addEventListener('change', handleStoreAccessSupervisorChange);
     document.getElementById('storeAccessSearch').addEventListener('input', handleStoreAccessSearch);
     document.getElementById('storeAccessList').addEventListener('change', handleStoreAccessListChange);
+    document.getElementById('toggleSupervisorActiveBtn').addEventListener('click', toggleSupervisorActiveState);
     document.getElementById('saveStoreAccessBtn').addEventListener('click', saveStoreAccessAssignment);
     document.getElementById('logoutBtn').addEventListener('click', signOut);
     document.getElementById('activeOrdersCard').addEventListener('click', toggleActiveOrdersPanel);
